@@ -20,8 +20,8 @@ func mtab() (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
-// GetDevPath ...
-func GetDevPath(mountpoint string) (string, error) {
+// GetPath ...
+func GetPath(mountpoint string) (string, error) {
 	mtab, err := mtab()
 	if err != nil {
 		return "", err
