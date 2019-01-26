@@ -7,12 +7,22 @@ import (
 	"strings"
 )
 
-// ErrNotFound ...
-var ErrNotFound = errors.New("Not Found")
+// Errors
+var (
+	// ErrNotFound ...
+	ErrNotFound = errors.New("Not Found")
+)
+
+// Paths
+var (
+	// MtabPath ...
+	MtabPath = filepath.Join("/", "etc", "mtab")
+	// SysBlockPath ...
+	SysBlockPath = filepath.Join("/", "sys", "block")
+)
 
 func mtab() (string, error) {
-	mtabPath := filepath.Join("/", "etc", "mtab")
-	b, err := ioutil.ReadFile(mtabPath)
+	b, err := ioutil.ReadFile(MtabPath)
 	if err != nil {
 		return "", err
 	}
