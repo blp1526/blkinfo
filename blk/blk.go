@@ -9,16 +9,14 @@ import (
 
 // Errors
 var (
-	// ErrNotFound ...
 	ErrNotFound = errors.New("Not Found")
 )
 
 // Paths
 var (
-	// MtabPath ...
-	MtabPath = filepath.Join("/", "etc", "mtab")
-	// SysBlockPath ...
+	MtabPath     = filepath.Join("/", "etc", "mtab")
 	SysBlockPath = filepath.Join("/", "sys", "block")
+	UdevDataPath = filepath.Join("/", "run", "udev", "data")
 )
 
 func mtab() (string, error) {
@@ -30,8 +28,8 @@ func mtab() (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
-// GetPath ...
-func GetPath(mountpoint string) (string, error) {
+// GetDevPath ...
+func GetDevPath(mountpoint string) (string, error) {
 	mtab, err := mtab()
 	if err != nil {
 		return "", err
@@ -78,6 +76,17 @@ func GetMajorMinor(devPath string) (string, error) {
 	}
 
 	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	majorMinor := "b" + strings.TrimSpace(string(b))
+	return majorMinor, nil
+}
+
+// GetUdevData ...
+func GetUdevData(majorMinor string) (string, error) {
+	b, err := ioutil.ReadFile(filepath.Join(UdevDataPath, majorMinor))
 	if err != nil {
 		return "", err
 	}
