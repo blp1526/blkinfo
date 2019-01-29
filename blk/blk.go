@@ -40,7 +40,12 @@ func GetDevPath(mountpoint string) (string, error) {
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if fields[1] == mountpoint {
-			return fields[0], nil
+			devPath, err := filepath.EvalSymlinks(fields[0])
+			if err != nil {
+				return "", err
+			}
+
+			return devPath, nil
 		}
 	}
 
