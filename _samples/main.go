@@ -23,17 +23,24 @@ func main() {
 
 	fmt.Printf("## devPath\n%s\n\n", devPath)
 
-	majorMinor, _ := blk.GetMajorMinor(devPath)
+	majorMinor, err := blk.GetMajorMinor(devPath)
 	if err != nil {
 		exit1(err)
 	}
 
 	fmt.Printf("## majorMinor\n%s\n\n", majorMinor)
 
-	udevData, _ := blk.GetUdevData(majorMinor)
+	udevData, err := blk.GetUdevData(majorMinor)
 	if err != nil {
 		exit1(err)
 	}
 
-	fmt.Printf("## udevData\n%s\n", udevData)
+	fmt.Printf("## udevData\n%s\n\n", udevData)
+
+	partTableType, _ := blk.GetPartTableType(majorMinor)
+	if err != nil {
+		exit1(err)
+	}
+
+	fmt.Printf("## partTableType\n%s\n\n", partTableType)
 }
