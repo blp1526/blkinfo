@@ -98,3 +98,21 @@ func GetUdevData(majorMinor string) (string, error) {
 
 	return strings.TrimSpace(string(b)), nil
 }
+
+// GetPartTableType ...
+func GetPartTableType(majorMinor string) (string, error) {
+	udevData, err := GetUdevData(majorMinor)
+	if err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(udevData, "\n")
+	for _, line := range lines {
+		prefix := "E:ID_PART_TABLE_TYPE="
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimPrefix(line, prefix), nil
+		}
+	}
+
+	return "", ErrNotFound
+}
