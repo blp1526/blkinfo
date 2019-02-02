@@ -110,7 +110,15 @@ func GetPartTableType(majorMinor string) (string, error) {
 	for _, line := range lines {
 		prefix := "E:ID_PART_TABLE_TYPE="
 		if strings.HasPrefix(line, prefix) {
-			return strings.TrimPrefix(line, prefix), nil
+			rawName := strings.TrimPrefix(line, prefix)
+			switch rawName {
+			case "dos":
+				return "MBR", nil
+			case "gpt":
+				return "GPT", nil
+			default:
+				return "UNKNOWN", nil
+			}
 		}
 	}
 
