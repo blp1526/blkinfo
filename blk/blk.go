@@ -52,6 +52,25 @@ func GetDevPath(mountpoint string) (string, error) {
 	return "", ErrNotFound
 }
 
+// GetMountpoint ...
+func GetMountpoint(devPath string) (string, error) {
+	mtab, err := mtab()
+	if err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(mtab, "\n")
+
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if fields[0] == devPath {
+			return fields[1], nil
+		}
+	}
+
+	return "", ErrNotFound
+}
+
 // GetMajorMinor ...
 func GetMajorMinor(devPath string) (string, error) {
 	devName := filepath.Base(devPath)

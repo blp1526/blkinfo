@@ -43,4 +43,15 @@ func main() {
 	}
 
 	fmt.Printf("## partTableType\n%s\n\n", partTableType)
+
+	fmt.Printf("###############################\n\n")
+
+	loopDevPath := "/dev/loop0"
+	loopMountpoint, err := blk.GetMountpoint(loopDevPath)
+	if err != nil {
+		exit1(err)
+	}
+
+	fmt.Printf("## loopDevPath: %s\nloopMountpoint: %s\n\n", loopDevPath, loopMountpoint)
+
 }
