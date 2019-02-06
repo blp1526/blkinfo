@@ -143,3 +143,14 @@ func GetPartTableType(majorMinor string) (string, error) {
 
 	return "", ErrNotFound
 }
+
+// GetOsType ...
+func GetOsType(mountpoint string) (string, error) {
+	osReleasePath := filepath.Join(mountpoint, "etc", "os-release")
+	b, err := ioutil.ReadFile(osReleasePath)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(b)), nil
+}

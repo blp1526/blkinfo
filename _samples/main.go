@@ -16,6 +16,13 @@ func main() {
 	mountpoint := "/"
 	fmt.Printf("## mountpoint\n%s\n\n", mountpoint)
 
+	osType, err := blk.GetOsType(mountpoint)
+	if err != nil {
+		exit1(err)
+	}
+
+	fmt.Printf("## osType\n%s\n\n", osType)
+
 	devPath, err := blk.GetDevPath(mountpoint)
 	if err != nil {
 		exit1(err)
@@ -53,5 +60,4 @@ func main() {
 	}
 
 	fmt.Printf("## loopDevPath: %s\nloopMountpoint: %s\n\n", loopDevPath, loopMountpoint)
-
 }
