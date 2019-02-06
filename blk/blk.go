@@ -141,7 +141,7 @@ func GetPartTableType(majorMinor string) (string, error) {
 		}
 	}
 
-	return "", ErrNotFound
+	return "NONE", nil
 }
 
 // GetOsType ...
