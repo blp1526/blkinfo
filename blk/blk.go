@@ -16,11 +16,22 @@ var (
 var (
 	MtabPath     = filepath.Join("/", "etc", "mtab")
 	SysBlockPath = filepath.Join("/", "sys", "block")
+	ProcPath     = filepath.Join("/", "proc")
 	UdevDataPath = filepath.Join("/", "run", "udev", "data")
 )
 
 func mtab() (string, error) {
 	b, err := ioutil.ReadFile(MtabPath)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(b)), nil
+}
+
+// SwapInfo ...
+func SwapInfo() (string, error) {
+	b, err := ioutil.ReadFile(filepath.Join(ProcPath, "swaps"))
 	if err != nil {
 		return "", err
 	}

@@ -13,6 +13,13 @@ func exit1(err error) {
 }
 
 func main() {
+	swapInfo, err := blk.SwapInfo()
+	if err != nil {
+		exit1(err)
+	}
+
+	fmt.Printf("## swapinfo\n%s\n\n", swapInfo)
+
 	mountpoint := "/"
 	fmt.Printf("## mountpoint\n%s\n\n", mountpoint)
 
