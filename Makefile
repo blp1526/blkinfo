@@ -1,15 +1,14 @@
 .PHONY: all
 all: test
 
-.PHONY: gometalinter
-gometalinter:
-	go get github.com/alecthomas/gometalinter
-	gometalinter --install
+.PHONY: lint
+lint:
+	go get github.com/golangci/golangci-lint/cmd/golangci-lint
 	@echo
-	gometalinter --config .gometalinter.json ./...
+	golangci-lint run ./...
 	@echo
 
 .PHONY: test
-test: gometalinter
+test: lint
 	go test ./... -v --cover -race -covermode=atomic -coverprofile=coverage.txt
 	@echo

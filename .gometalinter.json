@@ -1,5 +1,0 @@
-{
-  "Enable": ["vet", "gofmt", "golint", "goimports", "gocyclo"],
-  "Vendor": true,
-  "Skip": []
-}
