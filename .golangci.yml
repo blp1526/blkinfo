@@ -1,0 +1,12 @@
+linters:
+  enable-all: true
+  disable:
+    - maligned
+    - prealloc
+    - gosec
+    - gochecknoglobals
+linters-settings:
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 10
