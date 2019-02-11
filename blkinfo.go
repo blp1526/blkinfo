@@ -1,22 +1,48 @@
 package blkinfo
 
 import (
-	"errors"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // BlkInfo ...
 type BlkInfo struct {
-	realDevPath string
-	mountpoint  string
-	number      string
+	RealPath     string
+	Paths        []string
+	Mountpoint   string
+	MajorMinor   string
+	RawUdevData  string
+	FsUUID       string
+	FsType       string
+	PartEntry    *PartEntry
+	RawOSRelease string
+	OS           *OS
+}
+
+// PartEntry ...
+type PartEntry struct {
+	Scheme string
+	Type   string
+	Number string
+}
+
+// OS ...
+type OS struct {
+	Name       string
+	Version    string
+	ID         string
+	VersionID  string
+	IDLike     string
+	PrettyName string
 }
 
 // New ...
 func New(devPath string) (*BlkInfo, error) {
-	realDevPath, err := filepath.EvalSymlinks(devPath)
+	realPath, err := filepath.EvalSymlinks(devPath)
 	if err != nil {
 		return nil, err
 	}
@@ -26,48 +52,40 @@ func New(devPath string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	mountpoint, err := mountpoint(mtab, realDevPath)
+	mountpoint, err := mountpoint(mtab, realPath)
 	if err != nil {
 		return nil, err
 	}
 
-	number, err := number(realDevPath)
+	majorMinor, err := majorMinor(realPath)
 	if err != nil {
 		return nil, err
 	}
 
-	bi := &BlkInfo{
-		realDevPath: realDevPath,
-		mountpoint:  mountpoint,
-		number:      number,
-	}
-
-	return bi, nil
-}
-
-// UdevInfo ...
-func (bi *BlkInfo) UdevInfo() (string, error) {
-	udevInfo, err := readFile(filepath.Join("/", "run", "udev", "data", "b"+bi.number))
+	rawUdevData, err := rawUdevData(majorMinor)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return udevInfo, nil
-}
-
-// OsInfo ...
-func (bi *BlkInfo) OsInfo() (string, error) {
-	if bi.mountpoint == "" {
-		return "", errors.New("no mountpoint")
-	}
-
-	osReleasePath := filepath.Join(bi.mountpoint, "etc", "os-release")
-	osInfo, err := readFile(osReleasePath)
+	rawOSRelease, err := rawOSRelease(mountpoint)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return osInfo, nil
+	b := &BlkInfo{
+		RealPath:     realPath,
+		Mountpoint:   mountpoint,
+		MajorMinor:   majorMinor,
+		RawUdevData:  rawUdevData,
+		Paths:        paths(rawUdevData),
+		FsUUID:       fsUUID(rawUdevData),
+		FsType:       fsType(rawUdevData),
+		PartEntry:    newPartEntry(rawUdevData),
+		RawOSRelease: rawOSRelease,
+		OS:           newOS(rawOSRelease),
+	}
+
+	return b, nil
 }
 
 func readFile(path string) (string, error) {
@@ -79,6 +97,15 @@ func readFile(path string) (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
+func trimQuotationMarks(s string) string {
+	for _, q := range []string{`"`, `'`} {
+		s = strings.TrimPrefix(s, q)
+		s = strings.TrimSuffix(s, q)
+	}
+
+	return s
+}
+
 func mtab() (string, error) {
 	mtab, err := readFile(filepath.Join("/", "etc", "mtab"))
 	if err != nil {
@@ -88,7 +115,7 @@ func mtab() (string, error) {
 	return mtab, nil
 }
 
-func mountpoint(mtab string, realDevPath string) (string, error) {
+func mountpoint(mtab string, realPath string) (string, error) {
 	for _, line := range strings.Split(mtab, "\n") {
 		fields := strings.Fields(line)
 
@@ -101,7 +128,7 @@ func mountpoint(mtab string, realDevPath string) (string, error) {
 				return "", err
 			}
 
-			if realPath == realDevPath {
+			if realPath == realPath {
 				return mountpoint, nil
 			}
 		}
@@ -110,8 +137,8 @@ func mountpoint(mtab string, realDevPath string) (string, error) {
 	return "", nil
 }
 
-func number(realDevPath string) (string, error) {
-	devName := filepath.Base(realDevPath)
+func majorMinor(realPath string) (string, error) {
+	devName := filepath.Base(realPath)
 	sysBlockPath := filepath.Join("/", "sys", "block")
 	fileInfos, err := ioutil.ReadDir(sysBlockPath)
 	if err != nil {
@@ -143,4 +170,142 @@ func number(realDevPath string) (string, error) {
 	}
 
 	return number, nil
+}
+
+func rawUdevData(majorMinor string) (string, error) {
+	rawUdevData, err := readFile(filepath.Join("/", "run", "udev", "data", "b"+majorMinor))
+	if err != nil {
+		return "", err
+	}
+
+	return rawUdevData, nil
+}
+
+func paths(rawUdevData string) []string {
+	paths := []string{}
+
+	for _, line := range strings.Split(rawUdevData, "\n") {
+		prefix := "S:"
+		if strings.HasPrefix(line, prefix) {
+			paths = append(paths, filepath.Join("/dev", strings.TrimPrefix(line, prefix)))
+		}
+	}
+
+	return paths
+}
+
+func fsUUID(rawUdevData string) string {
+	for _, line := range strings.Split(rawUdevData, "\n") {
+		prefix := "E:ID_FS_UUID="
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimPrefix(line, prefix)
+		}
+	}
+
+	return ""
+}
+
+func fsType(rawUdevData string) string {
+	for _, line := range strings.Split(rawUdevData, "\n") {
+		prefix := "E:ID_FS_TYPE="
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimPrefix(line, prefix)
+		}
+	}
+
+	return ""
+}
+
+func newPartEntry(rawUdevData string) *PartEntry {
+	partEntry := &PartEntry{}
+	for _, line := range strings.Split(rawUdevData, "\n") {
+		prefix := "E:ID_PART_ENTRY_SCHEME="
+		if strings.HasPrefix(line, prefix) {
+			partEntry.Scheme = strings.TrimPrefix(line, prefix)
+			continue
+		}
+
+		prefix = "E:ID_PART_ENTRY_TYPE="
+		if strings.HasPrefix(line, prefix) {
+			partEntry.Type = strings.TrimPrefix(line, prefix)
+			continue
+		}
+
+		prefix = "E:ID_PART_ENTRY_NUMBER="
+		if strings.HasPrefix(line, prefix) {
+			partEntry.Number = strings.TrimPrefix(line, prefix)
+		}
+	}
+
+	return partEntry
+}
+
+func rawOSRelease(mountpoint string) (string, error) {
+	if mountpoint == "" {
+		return "", nil
+	}
+
+	osReleasePath := filepath.Join(mountpoint, "etc", "os-release")
+	fileInfo, err := os.Stat(osReleasePath)
+	if err == os.ErrNotExist {
+		return "", nil
+	}
+
+	if err != nil && err != os.ErrNotExist {
+		return "", err
+	}
+
+	if fileInfo.IsDir() {
+		return "", errors.Errorf("%s is not a file", osReleasePath)
+	}
+
+	rawOSRelease, err := readFile(osReleasePath)
+	if err != nil {
+		return "", err
+	}
+
+	return rawOSRelease, nil
+}
+
+func newOS(rawOSRelease string) *OS {
+	os := &OS{}
+	for _, line := range strings.Split(rawOSRelease, "\n") {
+		prefix := "NAME="
+		if strings.HasPrefix(line, prefix) {
+			os.Name = trimQuotationMarks(strings.TrimPrefix(line, prefix))
+			continue
+		}
+
+		prefix = "VERSION="
+		if strings.HasPrefix(line, prefix) {
+			os.Version = trimQuotationMarks(strings.TrimPrefix(line, prefix))
+			continue
+		}
+
+		prefix = "ID="
+		if strings.HasPrefix(line, prefix) {
+			os.ID = trimQuotationMarks(strings.TrimPrefix(line, prefix))
+			continue
+		}
+
+		prefix = "VERSION_ID="
+		if strings.HasPrefix(line, prefix) {
+			os.VersionID = trimQuotationMarks(strings.TrimPrefix(line, prefix))
+			continue
+		}
+
+		prefix = "ID_LIKE="
+		if strings.HasPrefix(line, prefix) {
+			os.IDLike = trimQuotationMarks(strings.TrimPrefix(line, prefix))
+			continue
+		}
+
+		prefix = "PRETTY_NAME="
+		if strings.HasPrefix(line, prefix) {
+			os.PrettyName = trimQuotationMarks(strings.TrimPrefix(line, prefix))
+			continue
+		}
+	}
+
+	return os
 }
