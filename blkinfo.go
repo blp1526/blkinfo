@@ -100,8 +100,11 @@ func readFile(path string) (string, error) {
 
 func trimQuotationMarks(s string) string {
 	for _, q := range []string{`"`, `'`} {
-		s = strings.TrimPrefix(s, q)
-		s = strings.TrimSuffix(s, q)
+		if strings.HasPrefix(s, q) && strings.HasSuffix(s, q) {
+			s = strings.TrimPrefix(s, q)
+			s = strings.TrimSuffix(s, q)
+			break
+		}
 	}
 
 	return s
