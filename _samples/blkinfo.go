@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/blp1526/go-blkinfo"
+	blkinfo "github.com/blp1526/go-blkinfo"
+	"github.com/k0kubun/pp"
 )
 
 func main() {
@@ -13,25 +11,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%#v\n", blkInfo)
-
-	udevInfo, err := blkInfo.UdevInfo()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("\n=== blkInfo.UdevInfo() ===\n")
-	for _, line := range strings.Split(udevInfo, "\n") {
-		fmt.Println(line)
-	}
-
-	osInfo, err := blkInfo.OsInfo()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("\n=== blkInfo.OsInfo() ===\n")
-	for _, line := range strings.Split(osInfo, "\n") {
-		fmt.Println(line)
-	}
+	pp.Printf("%v\n", blkInfo)
 }
