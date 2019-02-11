@@ -1,43 +1,44 @@
 package blkinfo
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
+	"errors"
 )
 
 // BlkInfo ...
 type BlkInfo struct {
-	RealPath     string
-	Paths        []string
-	Mountpoint   string
-	MajorMinor   string
-	RawUdevData  string
-	FsUUID       string
-	FsType       string
-	PartEntry    *PartEntry
-	RawOSRelease string
-	OS           *OS
+	RealPath     string     `json:"real_path"      yaml:"real_path"     `
+	Paths        []string   `json:"paths"          yaml:"paths"         `
+	Mountpoint   string     `json:"mountpoint"     yaml:"mountpoint"    `
+	MajorMinor   string     `json:"major_minor"    yaml:"major_minor"   `
+	RawUdevData  string     `json:"raw_udev_data"  yaml:"raw_udev_data" `
+	FsUUID       string     `json:"fs_uuid"        yaml:"fs_uuid"       `
+	FsType       string     `json:"fs_type"        yaml:"fs_type"       `
+	PartEntry    *PartEntry `json:"part_entry"     yaml:"part_entry"    `
+	RawOSRelease string     `json:"raw_os_release" yaml:"raw_os_release"`
+	OS           *OS        `json:"os"             yaml:"os"            `
 }
 
 // PartEntry ...
 type PartEntry struct {
-	Scheme string
-	Type   string
-	Number string
+	Scheme string `json:"scheme" yaml:"scheme"`
+	Type   string `json:"type"   yaml:"type"  `
+	Number string `json:"number" yaml:"number"`
 }
 
 // OS ...
 type OS struct {
-	Name       string
-	Version    string
-	ID         string
-	VersionID  string
-	IDLike     string
-	PrettyName string
+	Name       string `json:"name"        yaml:"name"       `
+	Version    string `json:"version"     yaml:"version"    `
+	ID         string `json:"id"          yaml:"id"         `
+	VersionID  string `json:"version_id"  yaml:"version_id" `
+	IDLike     string `json:"id_like"     yaml:"id_like"    `
+	PrettyName string `json:"pretty_name" yaml:"pretty_name"`
 }
 
 // New ...
@@ -72,7 +73,7 @@ func New(devPath string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	b := &BlkInfo{
+	bi := &BlkInfo{
 		RealPath:     realPath,
 		Mountpoint:   mountpoint,
 		MajorMinor:   majorMinor,
@@ -85,7 +86,7 @@ func New(devPath string) (*BlkInfo, error) {
 		OS:           newOS(rawOSRelease),
 	}
 
-	return b, nil
+	return bi, nil
 }
 
 func readFile(path string) (string, error) {
@@ -119,17 +120,17 @@ func mountpoint(mtab string, realPath string) (string, error) {
 	for _, line := range strings.Split(mtab, "\n") {
 		fields := strings.Fields(line)
 
-		path := fields[0]
-		mountpoint := fields[1]
+		pathField := fields[0]
+		mountpointField := fields[1]
 
-		if strings.HasPrefix(path, "/dev") {
-			realPath, err := filepath.EvalSymlinks(path)
+		if strings.HasPrefix(pathField, "/dev") {
+			realPathField, err := filepath.EvalSymlinks(pathField)
 			if err != nil {
 				return "", err
 			}
 
-			if realPath == realPath {
-				return mountpoint, nil
+			if realPathField == realPath {
+				return mountpointField, nil
 			}
 		}
 	}
@@ -138,7 +139,7 @@ func mountpoint(mtab string, realPath string) (string, error) {
 }
 
 func majorMinor(realPath string) (string, error) {
-	devName := filepath.Base(realPath)
+	baseName := filepath.Base(realPath)
 	sysBlockPath := filepath.Join("/", "sys", "block")
 	fileInfos, err := ioutil.ReadDir(sysBlockPath)
 	if err != nil {
@@ -148,11 +149,11 @@ func majorMinor(realPath string) (string, error) {
 	numberPath := ""
 	for _, fileInfo := range fileInfos {
 		fileInfoName := fileInfo.Name()
-		if strings.HasPrefix(devName, fileInfoName) {
+		if strings.HasPrefix(baseName, fileInfoName) {
 			numberPath = filepath.Join(sysBlockPath, fileInfoName)
-			if devName != fileInfoName {
+			if baseName != fileInfoName {
 				// name is a partition.
-				numberPath = filepath.Join(numberPath, devName)
+				numberPath = filepath.Join(numberPath, baseName)
 			}
 
 			numberPath = filepath.Join(numberPath, "dev")
@@ -217,27 +218,25 @@ func fsType(rawUdevData string) string {
 }
 
 func newPartEntry(rawUdevData string) *PartEntry {
-	partEntry := &PartEntry{}
+	pe := &PartEntry{}
 	for _, line := range strings.Split(rawUdevData, "\n") {
-		prefix := "E:ID_PART_ENTRY_SCHEME="
-		if strings.HasPrefix(line, prefix) {
-			partEntry.Scheme = strings.TrimPrefix(line, prefix)
-			continue
-		}
+		if strings.HasPrefix(line, "E:ID_PART_ENTRY") {
+			s := strings.SplitN(line, "=", 2)
+			key := s[0]
+			value := trimQuotationMarks(s[1])
 
-		prefix = "E:ID_PART_ENTRY_TYPE="
-		if strings.HasPrefix(line, prefix) {
-			partEntry.Type = strings.TrimPrefix(line, prefix)
-			continue
-		}
-
-		prefix = "E:ID_PART_ENTRY_NUMBER="
-		if strings.HasPrefix(line, prefix) {
-			partEntry.Number = strings.TrimPrefix(line, prefix)
+			switch key {
+			case "E:ID_PART_ENTRY_SCHEME":
+				pe.Scheme = value
+			case "E:ID_PART_ENTRY_TYPE":
+				pe.Type = value
+			case "E:ID_PART_ENTRY_NUMBER":
+				pe.Number = value
+			}
 		}
 	}
 
-	return partEntry
+	return pe
 }
 
 func rawOSRelease(mountpoint string) (string, error) {
@@ -256,7 +255,7 @@ func rawOSRelease(mountpoint string) (string, error) {
 	}
 
 	if fileInfo.IsDir() {
-		return "", errors.Errorf("%s is not a file", osReleasePath)
+		return "", fmt.Errorf("%s is not a file", osReleasePath)
 	}
 
 	rawOSRelease, err := readFile(osReleasePath)
@@ -270,40 +269,23 @@ func rawOSRelease(mountpoint string) (string, error) {
 func newOS(rawOSRelease string) *OS {
 	os := &OS{}
 	for _, line := range strings.Split(rawOSRelease, "\n") {
-		prefix := "NAME="
-		if strings.HasPrefix(line, prefix) {
-			os.Name = trimQuotationMarks(strings.TrimPrefix(line, prefix))
-			continue
-		}
+		s := strings.SplitN(line, "=", 2)
+		key := s[0]
+		value := trimQuotationMarks(s[1])
 
-		prefix = "VERSION="
-		if strings.HasPrefix(line, prefix) {
-			os.Version = trimQuotationMarks(strings.TrimPrefix(line, prefix))
-			continue
-		}
-
-		prefix = "ID="
-		if strings.HasPrefix(line, prefix) {
-			os.ID = trimQuotationMarks(strings.TrimPrefix(line, prefix))
-			continue
-		}
-
-		prefix = "VERSION_ID="
-		if strings.HasPrefix(line, prefix) {
-			os.VersionID = trimQuotationMarks(strings.TrimPrefix(line, prefix))
-			continue
-		}
-
-		prefix = "ID_LIKE="
-		if strings.HasPrefix(line, prefix) {
-			os.IDLike = trimQuotationMarks(strings.TrimPrefix(line, prefix))
-			continue
-		}
-
-		prefix = "PRETTY_NAME="
-		if strings.HasPrefix(line, prefix) {
-			os.PrettyName = trimQuotationMarks(strings.TrimPrefix(line, prefix))
-			continue
+		switch key {
+		case "NAME":
+			os.Name = value
+		case "VERSION":
+			os.Version = value
+		case "ID":
+			os.ID = value
+		case "VERSION_ID":
+			os.VersionID = value
+		case "ID_LIKE":
+			os.IDLike = value
+		case "PRETTY_NAME":
+			os.PrettyName = value
 		}
 	}
 

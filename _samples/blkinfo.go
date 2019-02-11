@@ -1,15 +1,22 @@
 package main
 
 import (
+	"fmt"
+
 	blkinfo "github.com/blp1526/go-blkinfo"
-	"github.com/k0kubun/pp"
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
-	blkInfo, err := blkinfo.New("/dev/sda1")
+	bi, err := blkinfo.New("/dev/sda1")
 	if err != nil {
 		panic(err)
 	}
 
-	pp.Printf("%v\n", blkInfo)
+	b, err := yaml.Marshal(bi)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%s", string(b))
 }
