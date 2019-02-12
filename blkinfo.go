@@ -222,6 +222,10 @@ func fsType(rawUdevData string) string {
 
 func newPartEntry(rawUdevData string) *PartEntry {
 	pe := &PartEntry{}
+	if rawUdevData == "" {
+		return pe
+	}
+
 	for _, line := range strings.Split(rawUdevData, "\n") {
 		if strings.HasPrefix(line, "E:ID_PART_ENTRY") {
 			s := strings.SplitN(line, "=", 2)
@@ -271,8 +275,16 @@ func rawOSRelease(mountpoint string) (string, error) {
 
 func newOS(rawOSRelease string) *OS {
 	os := &OS{}
+	if rawOSRelease == "" {
+		return os
+	}
+
 	for _, line := range strings.Split(rawOSRelease, "\n") {
 		s := strings.SplitN(line, "=", 2)
+		if len(s) != 2 {
+			continue
+		}
+
 		key := s[0]
 		value := trimQuotationMarks(s[1])
 
