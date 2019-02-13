@@ -56,6 +56,41 @@ func TestTrimQuottionMarks(t *testing.T) {
 	}
 }
 
+func TestNewPartEntry(t *testing.T) {
+	tests := []struct {
+		rawUdevData string
+		want        *PartEntry
+	}{
+		{
+			rawUdevData: ``,
+			want:        &PartEntry{},
+		},
+		{
+			rawUdevData: `
+E:ID_PART_ENTRY_SCHEME=dos
+E:ID_PART_ENTRY_UUID=xxxxxxxx-xx
+E:ID_PART_ENTRY_TYPE=0x83
+E:ID_PART_ENTRY_FLAGS=0x80
+E:ID_PART_ENTRY_NUMBER=1
+E:ID_PART_ENTRY_OFFSET=2048
+E:ID_PART_ENTRY_SIZE=209711104
+E:ID_PART_ENTRY_DISK=8:0
+`,
+			want: &PartEntry{
+				Scheme: "dos",
+				Type:   "0x83",
+				Number: "1",
+			},
+		},
+	}
+	for _, tt := range tests {
+		got := newPartEntry(tt.rawUdevData)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("got: %+v, tt.want: %+v", got, tt.want)
+		}
+	}
+}
+
 func TestNewOS(t *testing.T) {
 	tests := []struct {
 		rawOSRelease string
