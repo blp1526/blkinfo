@@ -19,9 +19,16 @@ type BlkInfo struct {
 	RawUdevData  string     `json:"raw_udev_data"  yaml:"raw_udev_data" `
 	FsUUID       string     `json:"fs_uuid"        yaml:"fs_uuid"       `
 	FsType       string     `json:"fs_type"        yaml:"fs_type"       `
+	PartTable    *PartTable `json:"part_table"     yaml:"part_table"    `
 	PartEntry    *PartEntry `json:"part_entry"     yaml:"part_entry"    `
 	RawOSRelease string     `json:"raw_os_release" yaml:"raw_os_release"`
 	OS           *OS        `json:"os"             yaml:"os"            `
+}
+
+// PartTable ...
+type PartTable struct {
+	UUID string `json:"uuid" yaml:"uuid"`
+	Type string `json:"type" yaml:"type"`
 }
 
 // PartEntry ...
@@ -81,6 +88,7 @@ func New(devPath string) (*BlkInfo, error) {
 		Paths:        paths(rawUdevData),
 		FsUUID:       fsUUID(rawUdevData),
 		FsType:       fsType(rawUdevData),
+		PartTable:    newPartTable(rawUdevData),
 		PartEntry:    newPartEntry(rawUdevData),
 		RawOSRelease: rawOSRelease,
 		OS:           newOS(rawOSRelease),
@@ -218,6 +226,30 @@ func fsType(rawUdevData string) string {
 	}
 
 	return ""
+}
+
+func newPartTable(rawUdevData string) *PartTable {
+	pt := &PartTable{}
+	if rawUdevData == "" {
+		return pt
+	}
+
+	for _, line := range strings.Split(rawUdevData, "\n") {
+		if strings.HasPrefix(line, "E:ID_PART_TABLE") {
+			s := strings.SplitN(line, "=", 2)
+			key := s[0]
+			value := trimQuotationMarks(s[1])
+
+			switch key {
+			case "E:ID_PART_TABLE_UUID":
+				pt.UUID = value
+			case "E:ID_PART_TABLE_TYPE":
+				pt.Type = value
+			}
+		}
+	}
+
+	return pt
 }
 
 func newPartEntry(rawUdevData string) *PartEntry {
