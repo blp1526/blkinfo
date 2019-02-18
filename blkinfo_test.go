@@ -110,6 +110,35 @@ func TestTrimQuottionMarks(t *testing.T) {
 	}
 }
 
+func TestPaths(t *testing.T) {
+	tests := []struct {
+		rawUdevData string
+		want        []string
+	}{
+		{
+			rawUdevData: ``,
+			want:        []string{},
+		},
+		{
+			rawUdevData: `S:disk/by-path/pci-0000:00:00.0-scsi-0:0:0:0-part1
+S:disk/by-partuuid/xxxxxxxx-xx
+S:disk/by-uuid/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`,
+			want: []string{
+				"/dev/disk/by-path/pci-0000:00:00.0-scsi-0:0:0:0-part1",
+				"/dev/disk/by-partuuid/xxxxxxxx-xx",
+				"/dev/disk/by-uuid/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		got := paths(tt.rawUdevData)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("tt: %#v, got: %v", tt, got)
+		}
+	}
+}
+
 func TestNewPartEntry(t *testing.T) {
 	tests := []struct {
 		rawUdevData string
