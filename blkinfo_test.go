@@ -110,6 +110,52 @@ func TestTrimQuottionMarks(t *testing.T) {
 	}
 }
 
+func TestFsUUID(t *testing.T) {
+	tests := []struct {
+		rawUdevData string
+		want        string
+	}{
+		{
+			rawUdevData: "",
+			want:        "",
+		},
+		{
+			rawUdevData: "E:ID_FS_UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			want:        "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+		},
+	}
+
+	for _, tt := range tests {
+		got := fsUUID(tt.rawUdevData)
+		if got != tt.want {
+			t.Errorf("tt: %#v, got: %v", tt, got)
+		}
+	}
+}
+
+func TestFsType(t *testing.T) {
+	tests := []struct {
+		rawUdevData string
+		want        string
+	}{
+		{
+			rawUdevData: "",
+			want:        "",
+		},
+		{
+			rawUdevData: "E:ID_FS_TYPE=ext4",
+			want:        "ext4",
+		},
+	}
+
+	for _, tt := range tests {
+		got := fsType(tt.rawUdevData)
+		if got != tt.want {
+			t.Errorf("tt: %#v, got: %v", tt, got)
+		}
+	}
+}
+
 func TestPaths(t *testing.T) {
 	tests := []struct {
 		rawUdevData string
