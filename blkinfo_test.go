@@ -185,6 +185,34 @@ S:disk/by-uuid/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`,
 	}
 }
 
+func TestNewPartTable(t *testing.T) {
+	tests := []struct {
+		rawUdevData string
+		want        *PartTable
+	}{
+		{
+			rawUdevData: ``,
+			want:        &PartTable{},
+		},
+		{
+			rawUdevData: `
+E:ID_PART_TABLE_TYPE=dos
+E:ID_PART_TABLE_UUID=xxxxxxxx
+`,
+			want: &PartTable{
+				Type: "dos",
+				UUID: "xxxxxxxx",
+			},
+		},
+	}
+	for _, tt := range tests {
+		got := newPartTable(tt.rawUdevData)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("got: %+v, tt.want: %+v", got, tt.want)
+		}
+	}
+}
+
 func TestNewPartEntry(t *testing.T) {
 	tests := []struct {
 		rawUdevData string
