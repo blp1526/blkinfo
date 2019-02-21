@@ -150,6 +150,9 @@ func mountpoint(mtab string, realPath string) (string, error) {
 }
 
 func majorMinor(realPath string) (string, error) {
+	// https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
+	// /sys/block/dm-0/slaves/sda --> /sys/block/sda
+	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
 	baseName := filepath.Base(realPath)
 	sysBlockPath := filepath.Join("/", "sys", "block")
 	fileInfos, err := ioutil.ReadDir(sysBlockPath)
