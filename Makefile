@@ -12,3 +12,8 @@ lint:
 test: lint
 	go test ./... -v --cover -race -covermode=atomic -coverprofile=coverage.txt
 	@echo
+
+.PHONY: build
+build: test
+	go build -o bin/blkinfo ./cmd/blkinfo
+	@echo
