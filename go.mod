@@ -6,5 +6,6 @@ require (
 	github.com/golangci/golangci-lint v1.15.0 // indirect
 	github.com/golangci/gosec v0.0.0-20180901114220-8afd9cbb6cfb // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/urfave/cli v1.20.0
 	gopkg.in/yaml.v2 v2.2.1
 )
