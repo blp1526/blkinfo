@@ -30,8 +30,8 @@ func main() {
 
 	var showCommand = cli.Command{
 		Name:      "show",
-		Usage:     "show blkinfo",
-		ArgsUsage: "path",
+		Usage:     "Show a block device info.",
+		ArgsUsage: "[device]",
 		Action: func(c *cli.Context) (err error) {
 			path := c.Args().First()
 			bi, err := blkinfo.New(path)
@@ -39,7 +39,7 @@ func main() {
 				return cli.NewExitError(err, exitCodeNG)
 			}
 
-			b, err := json.Marshal(bi)
+			b, err := json.MarshalIndent(bi, "", "  ")
 			if err != nil {
 				return cli.NewExitError(err, exitCodeNG)
 			}
