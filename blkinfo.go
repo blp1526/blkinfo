@@ -10,11 +10,12 @@ import (
 
 // BlkInfo shows a block device info.
 type BlkInfo struct {
-	RealPath   string   `json:"real_path"   yaml:"real_path"  `
-	Mountpoint string   `json:"mountpoint"  yaml:"mountpoint" `
-	SysfsPath  string   `json:"sysfs_path"  yaml:"sysfs_path" `
-	MajorMinor string   `json:"major_minor" yaml:"major_minor"`
-	UdevData   []string `json:"udev_data"   yaml:"udev_data"  `
+	RealPath     string   `json:"real_path"      yaml:"real_path"     `
+	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
+	SysfsPath    string   `json:"sysfs_path"     yaml:"sysfs_path"    `
+	SysfsUevent  []string `json:"sysfs_uevent"   yaml:"sysfs_uevent"  `
+	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
+	UdevData     []string `json:"udev_data"      yaml:"udev_data"     `
 }
 
 // New initializes *BlkInfo.
@@ -27,27 +28,34 @@ func New(devPath string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	bi.SysfsPath, err = getSysfsPath(bi.RealPath)
+	bi.SysfsPath, err = sysfsPath(bi.RealPath)
 	if err != nil {
 		return nil, err
 	}
 
-	bi.MajorMinor, err = getMajorMinor(bi.SysfsPath)
+	bi.SysfsUevent, err = sysfsUevent(bi.SysfsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	bi.UdevData, err = getUdevData(bi.MajorMinor)
+	majorMinor, err := majorMinor(bi.SysfsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	mtab, err := getMtab()
+	bi.UdevDataPath = udevDataPath(majorMinor)
+
+	bi.UdevData, err = udevData(bi.UdevDataPath)
 	if err != nil {
 		return nil, err
 	}
 
-	bi.Mountpoint, err = getMountpoint(mtab, bi.RealPath)
+	mtab, err := mtab()
+	if err != nil {
+		return nil, err
+	}
+
+	bi.Mountpoint, err = mountpoint(mtab, bi.RealPath)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +84,7 @@ func trimQuotationMarks(s string) string {
 	return s
 }
 
-func getMtab() (string, error) {
+func mtab() (string, error) {
 	mtab, err := readFile(filepath.Join("/", "etc", "mtab"))
 	if err != nil {
 		return "", err
@@ -85,7 +93,7 @@ func getMtab() (string, error) {
 	return mtab, nil
 }
 
-func getMountpoint(mtab string, realPath string) (string, error) {
+func mountpoint(mtab string, realPath string) (string, error) {
 	for _, line := range strings.Split(mtab, "\n") {
 		fields := strings.Fields(line)
 
@@ -107,7 +115,7 @@ func getMountpoint(mtab string, realPath string) (string, error) {
 	return "", nil
 }
 
-func getSysfsPath(realPath string) (string, error) {
+func sysfsPath(realPath string) (string, error) {
 	// https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
 	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
 	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
@@ -140,7 +148,16 @@ func getSysfsPath(realPath string) (string, error) {
 	return sysfsPath, nil
 }
 
-func getMajorMinor(sysfsPath string) (string, error) {
+func sysfsUevent(sysfsPath string) ([]string, error) {
+	sysfsUevent, err := readFile(filepath.Join(sysfsPath, "uevent"))
+	if err != nil {
+		return []string{}, err
+	}
+
+	return strings.Split(sysfsUevent, "\n"), nil
+}
+
+func majorMinor(sysfsPath string) (string, error) {
 	majorMinor, err := readFile(filepath.Join(sysfsPath, "dev"))
 	if err != nil {
 		return "", err
@@ -149,8 +166,12 @@ func getMajorMinor(sysfsPath string) (string, error) {
 	return majorMinor, nil
 }
 
-func getUdevData(majorMinor string) ([]string, error) {
-	rawUdevData, err := readFile(filepath.Join("/", "run", "udev", "data", "b"+majorMinor))
+func udevDataPath(majorMinor string) string {
+	return filepath.Join("/", "run", "udev", "data", "b"+majorMinor)
+}
+
+func udevData(udevDataPath string) ([]string, error) {
+	rawUdevData, err := readFile(udevDataPath)
 	if err != nil {
 		return []string{}, err
 	}
@@ -159,8 +180,8 @@ func getUdevData(majorMinor string) ([]string, error) {
 	return udevData, nil
 }
 
-// GetOSRelease gets /etc/os-release.
-func (bi *BlkInfo) GetOSRelease() ([]string, error) {
+// OSRelease shows /etc/os-release.
+func (bi *BlkInfo) OSRelease() ([]string, error) {
 	osRelease := []string{}
 
 	if bi.Mountpoint == "" {
