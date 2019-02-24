@@ -12,13 +12,32 @@ import (
 type BlkInfo struct {
 	RealPath   string   `json:"real_path"   yaml:"real_path"  `
 	Mountpoint string   `json:"mountpoint"  yaml:"mountpoint" `
+	SysfsPath  string   `json:"sysfs_path"  yaml:"sysfs_path" `
 	MajorMinor string   `json:"major_minor" yaml:"major_minor"`
 	UdevData   []string `json:"udev_data"   yaml:"udev_data"  `
 }
 
 // New initializes *BlkInfo.
 func New(devPath string) (*BlkInfo, error) {
-	realPath, err := filepath.EvalSymlinks(devPath)
+	var err error
+	bi := &BlkInfo{}
+
+	bi.RealPath, err = filepath.EvalSymlinks(devPath)
+	if err != nil {
+		return nil, err
+	}
+
+	bi.SysfsPath, err = getSysfsPath(bi.RealPath)
+	if err != nil {
+		return nil, err
+	}
+
+	bi.MajorMinor, err = getMajorMinor(bi.SysfsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	bi.UdevData, err = getUdevData(bi.MajorMinor)
 	if err != nil {
 		return nil, err
 	}
@@ -28,26 +47,9 @@ func New(devPath string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	mountpoint, err := getMountpoint(mtab, realPath)
+	bi.Mountpoint, err = getMountpoint(mtab, bi.RealPath)
 	if err != nil {
 		return nil, err
-	}
-
-	majorMinor, err := getMajorMinor(realPath)
-	if err != nil {
-		return nil, err
-	}
-
-	udevData, err := getUdevData(majorMinor)
-	if err != nil {
-		return nil, err
-	}
-
-	bi := &BlkInfo{
-		RealPath:   realPath,
-		Mountpoint: mountpoint,
-		MajorMinor: majorMinor,
-		UdevData:   udevData,
 	}
 
 	return bi, nil
@@ -105,37 +107,41 @@ func getMountpoint(mtab string, realPath string) (string, error) {
 	return "", nil
 }
 
-func getMajorMinor(realPath string) (string, error) {
+func getSysfsPath(realPath string) (string, error) {
 	// https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
-	// /sys/block/dm-0/slaves/sda --> /sys/block/sda
+	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
 	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
-	baseName := filepath.Base(realPath)
-	sysBlockPath := filepath.Join("/", "sys", "block")
-	fileInfos, err := ioutil.ReadDir(sysBlockPath)
+	devName := filepath.Base(realPath)
+	blockPath := filepath.Join("/", "sys", "block")
+	fileInfos, err := ioutil.ReadDir(blockPath)
 	if err != nil {
 		return "", err
 	}
 
-	numberPath := ""
+	sysfsPath := ""
 	for _, fileInfo := range fileInfos {
 		fileInfoName := fileInfo.Name()
-		if strings.HasPrefix(baseName, fileInfoName) {
-			numberPath = filepath.Join(sysBlockPath, fileInfoName)
-			if baseName != fileInfoName {
-				// name is a partition.
-				numberPath = filepath.Join(numberPath, baseName)
+		if strings.HasPrefix(devName, fileInfoName) {
+			// for example /sys/block/sda
+			sysfsPath = filepath.Join(blockPath, fileInfoName)
+			if devName != fileInfoName {
+				// for example /sys/block/sda/sda1
+				sysfsPath = filepath.Join(sysfsPath, devName)
 			}
 
-			numberPath = filepath.Join(numberPath, "dev")
 			break
 		}
 	}
 
-	if numberPath == "" {
+	if sysfsPath == "" {
 		return "", errors.New("not found")
 	}
 
-	majorMinor, err := readFile(numberPath)
+	return sysfsPath, nil
+}
+
+func getMajorMinor(sysfsPath string) (string, error) {
+	majorMinor, err := readFile(filepath.Join(sysfsPath, "dev"))
 	if err != nil {
 		return "", err
 	}
