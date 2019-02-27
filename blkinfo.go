@@ -2,6 +2,7 @@ package blkinfo
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +15,8 @@ type BlkInfo struct {
 	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
 	SysfsPath    string   `json:"sysfs_path"     yaml:"sysfs_path"    `
 	SysfsUevent  []string `json:"sysfs_uevent"   yaml:"sysfs_uevent"  `
+	Holders      []string `json:"holders"        yaml:"holders"       `
+	Slaves       []string `json:"slaves"         yaml:"slaves"        `
 	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
 	UdevData     []string `json:"udev_data"      yaml:"udev_data"     `
 }
@@ -34,6 +37,16 @@ func New(devPath string) (*BlkInfo, error) {
 	}
 
 	bi.SysfsUevent, err = sysfsUevent(bi.SysfsPath)
+	if err != nil {
+		return nil, err
+	}
+
+	bi.Holders, err = ls(filepath.Join(bi.SysfsPath, "holders"))
+	if err != nil {
+		return nil, err
+	}
+
+	bi.Slaves, err = ls(filepath.Join(bi.SysfsPath, "slaves"))
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +97,25 @@ func trimQuotationMarks(s string) string {
 	return s
 }
 
+func ls(path string) ([]string, error) {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return []string{}, nil
+	}
+
+	fileInfoList, err := ioutil.ReadDir(path)
+	if err != nil {
+		return []string{}, err
+	}
+
+	names := []string{}
+	for _, fileInfo := range fileInfoList {
+		names = append(names, fileInfo.Name())
+	}
+
+	return names, nil
+}
+
 func mtab() (string, error) {
 	mtab, err := readFile(filepath.Join("/", "etc", "mtab"))
 	if err != nil {
@@ -121,13 +153,13 @@ func sysfsPath(realPath string) (string, error) {
 	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
 	devName := filepath.Base(realPath)
 	blockPath := filepath.Join("/", "sys", "block")
-	fileInfos, err := ioutil.ReadDir(blockPath)
+	fileInfoList, err := ioutil.ReadDir(blockPath)
 	if err != nil {
 		return "", err
 	}
 
 	sysfsPath := ""
-	for _, fileInfo := range fileInfos {
+	for _, fileInfo := range fileInfoList {
 		fileInfoName := fileInfo.Name()
 		if strings.HasPrefix(devName, fileInfoName) {
 			// for example /sys/block/sda
