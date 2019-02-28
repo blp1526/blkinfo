@@ -21,7 +21,7 @@ type BlkInfo struct {
 	UdevData     []string `json:"udev_data"      yaml:"udev_data"     `
 }
 
-// Sys show a sysfs info.
+// Sys shows a sys info.
 type Sys struct {
 	Uevent  []string `json:"uevent"  yaml:"uevent" `
 	Slaves  []string `json:"slaves"  yaml:"slaves" `
@@ -45,7 +45,7 @@ func New(devPath string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	bi.Sys.Uevent, err = sysfsUevent(bi.SysPath)
+	bi.Sys.Uevent, err = sysUevent(bi.SysPath)
 	if err != nil {
 		return nil, err
 	}
@@ -199,20 +199,20 @@ func paths(realPath string) (sysPath string, parentPath string, childPaths []str
 		}
 	}
 
-	return "", "", []string{}, errors.New("sysfsPath, parentPath, and childPaths are not found")
+	return "", "", []string{}, errors.New("sysPath, parentPath, and childPaths are not found")
 }
 
-func sysfsUevent(sysfsPath string) ([]string, error) {
-	sysfsUevent, err := readFile(filepath.Join(sysfsPath, "uevent"))
+func sysUevent(sysPath string) ([]string, error) {
+	sysUevent, err := readFile(filepath.Join(sysPath, "uevent"))
 	if err != nil {
 		return []string{}, err
 	}
 
-	return strings.Split(sysfsUevent, "\n"), nil
+	return strings.Split(sysUevent, "\n"), nil
 }
 
-func majorMinor(sysfsPath string) (string, error) {
-	majorMinor, err := readFile(filepath.Join(sysfsPath, "dev"))
+func majorMinor(sysPath string) (string, error) {
+	majorMinor, err := readFile(filepath.Join(sysPath, "dev"))
 	if err != nil {
 		return "", err
 	}
