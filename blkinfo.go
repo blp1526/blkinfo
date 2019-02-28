@@ -12,37 +12,40 @@ import (
 // BlkInfo shows a block device info.
 type BlkInfo struct {
 	RealPath     string   `json:"real_path"      yaml:"real_path"     `
+	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
+	SysPath      string   `json:"sys_path"       yaml:"sys_path"      `
+	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
 	ParentPath   string   `json:"parent_path"    yaml:"parent_path"   `
 	ChildPaths   []string `json:"child_paths"    yaml:"child_paths"   `
-	SysfsPath    string   `json:"sysfs_path"     yaml:"sysfs_path"    `
-	SysfsUevent  []string `json:"sysfs_uevent"   yaml:"sysfs_uevent"  `
-	Holders      []string `json:"holders"        yaml:"holders"       `
-	Slaves       []string `json:"slaves"         yaml:"slaves"        `
-	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
+	Sys          *Sys     `json:"sys"            yaml:"sys"           `
 	UdevData     []string `json:"udev_data"      yaml:"udev_data"     `
-	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
+}
+
+// Sys show a sysfs info.
+type Sys struct {
+	Uevent  []string `json:"uevent"  yaml:"uevent" `
+	Slaves  []string `json:"slaves"  yaml:"slaves" `
+	Holders []string `json:"holders" yaml:"holders"`
 }
 
 // New initializes *BlkInfo.
 func New(devPath string) (*BlkInfo, error) {
 	var err error
-	bi := &BlkInfo{}
+	bi := &BlkInfo{
+		Sys: &Sys{},
+	}
 
 	bi.RealPath, err = filepath.EvalSymlinks(devPath)
 	if err != nil {
 		return nil, err
 	}
 
-	sysfsPath, parentPath, childPaths, err := paths(bi.RealPath)
+	bi.SysPath, bi.ParentPath, bi.ChildPaths, err = paths(bi.RealPath)
 	if err != nil {
 		return nil, err
 	}
 
-	bi.SysfsPath = sysfsPath
-	bi.ParentPath = parentPath
-	bi.ChildPaths = childPaths
-
-	bi.SysfsUevent, err = sysfsUevent(bi.SysfsPath)
+	bi.Sys.Uevent, err = sysfsUevent(bi.SysPath)
 	if err != nil {
 		return nil, err
 	}
@@ -50,17 +53,17 @@ func New(devPath string) (*BlkInfo, error) {
 	// https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
 	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
 	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
-	bi.Holders, err = ls(filepath.Join(bi.SysfsPath, "holders"))
+	bi.Sys.Slaves, err = ls(filepath.Join(bi.SysPath, "slaves"))
 	if err != nil {
 		return nil, err
 	}
 
-	bi.Slaves, err = ls(filepath.Join(bi.SysfsPath, "slaves"))
+	bi.Sys.Holders, err = ls(filepath.Join(bi.SysPath, "holders"))
 	if err != nil {
 		return nil, err
 	}
 
-	majorMinor, err := majorMinor(bi.SysfsPath)
+	majorMinor, err := majorMinor(bi.SysPath)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +159,7 @@ func mountpoint(mtab string, realPath string) (string, error) {
 	return "", nil
 }
 
-func paths(realPath string) (sysfsPath string, parentPath string, childPaths []string, err error) {
+func paths(realPath string) (sysPath string, parentPath string, childPaths []string, err error) {
 	devName := filepath.Base(realPath)
 	blockPath := filepath.Join("/", "sys", "block")
 	fileInfoList, err := ioutil.ReadDir(blockPath)
@@ -170,8 +173,8 @@ func paths(realPath string) (sysfsPath string, parentPath string, childPaths []s
 			switch devName {
 			case fileInfoName:
 				// for example /sys/block/sda
-				sysfsPath = filepath.Join(blockPath, fileInfoName)
-				fileInfoList, err := ioutil.ReadDir(sysfsPath)
+				sysPath = filepath.Join(blockPath, fileInfoName)
+				fileInfoList, err := ioutil.ReadDir(sysPath)
 				if err != nil {
 					return "", "", []string{}, err
 				}
@@ -185,13 +188,13 @@ func paths(realPath string) (sysfsPath string, parentPath string, childPaths []s
 				}
 
 				parentPath = ""
-				return sysfsPath, parentPath, childPaths, nil
+				return sysPath, parentPath, childPaths, nil
 			default:
 				// for example /sys/block/sda/sda1
-				sysfsPath = filepath.Join(blockPath, fileInfoName, devName)
+				sysPath = filepath.Join(blockPath, fileInfoName, devName)
 				parentPath = filepath.Join("/", "dev", fileInfoName)
 				childPaths = []string{}
-				return sysfsPath, parentPath, childPaths, nil
+				return sysPath, parentPath, childPaths, nil
 			}
 		}
 	}
