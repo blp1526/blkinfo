@@ -12,13 +12,15 @@ import (
 // BlkInfo shows a block device info.
 type BlkInfo struct {
 	RealPath     string   `json:"real_path"      yaml:"real_path"     `
-	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
+	ParentPath   string   `json:"parent_path"    yaml:"parent_path"   `
+	ChildPaths   []string `json:"child_paths"    yaml:"child_paths"   `
 	SysfsPath    string   `json:"sysfs_path"     yaml:"sysfs_path"    `
 	SysfsUevent  []string `json:"sysfs_uevent"   yaml:"sysfs_uevent"  `
 	Holders      []string `json:"holders"        yaml:"holders"       `
 	Slaves       []string `json:"slaves"         yaml:"slaves"        `
 	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
 	UdevData     []string `json:"udev_data"      yaml:"udev_data"     `
+	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
 }
 
 // New initializes *BlkInfo.
@@ -31,16 +33,23 @@ func New(devPath string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	bi.SysfsPath, err = sysfsPath(bi.RealPath)
+	sysfsPath, parentPath, childPaths, err := paths(bi.RealPath)
 	if err != nil {
 		return nil, err
 	}
+
+	bi.SysfsPath = sysfsPath
+	bi.ParentPath = parentPath
+	bi.ChildPaths = childPaths
 
 	bi.SysfsUevent, err = sysfsUevent(bi.SysfsPath)
 	if err != nil {
 		return nil, err
 	}
 
+	// https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
+	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
+	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
 	bi.Holders, err = ls(filepath.Join(bi.SysfsPath, "holders"))
 	if err != nil {
 		return nil, err
@@ -147,37 +156,47 @@ func mountpoint(mtab string, realPath string) (string, error) {
 	return "", nil
 }
 
-func sysfsPath(realPath string) (string, error) {
-	// https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
-	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
-	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
+func paths(realPath string) (sysfsPath string, parentPath string, childPaths []string, err error) {
 	devName := filepath.Base(realPath)
 	blockPath := filepath.Join("/", "sys", "block")
 	fileInfoList, err := ioutil.ReadDir(blockPath)
 	if err != nil {
-		return "", err
+		return "", "", []string{}, err
 	}
 
-	sysfsPath := ""
 	for _, fileInfo := range fileInfoList {
 		fileInfoName := fileInfo.Name()
 		if strings.HasPrefix(devName, fileInfoName) {
-			// for example /sys/block/sda
-			sysfsPath = filepath.Join(blockPath, fileInfoName)
-			if devName != fileInfoName {
-				// for example /sys/block/sda/sda1
-				sysfsPath = filepath.Join(sysfsPath, devName)
-			}
+			switch devName {
+			case fileInfoName:
+				// for example /sys/block/sda
+				sysfsPath = filepath.Join(blockPath, fileInfoName)
+				fileInfoList, err := ioutil.ReadDir(sysfsPath)
+				if err != nil {
+					return "", "", []string{}, err
+				}
 
-			break
+				childPaths = []string{}
+				for _, fileInfo := range fileInfoList {
+					fileInfoName = fileInfo.Name()
+					if strings.HasPrefix(fileInfoName, devName) {
+						childPaths = append(childPaths, filepath.Join("/", "dev", fileInfoName))
+					}
+				}
+
+				parentPath = ""
+				return sysfsPath, parentPath, childPaths, nil
+			default:
+				// for example /sys/block/sda/sda1
+				sysfsPath = filepath.Join(blockPath, fileInfoName, devName)
+				parentPath = filepath.Join("/", "dev", fileInfoName)
+				childPaths = []string{}
+				return sysfsPath, parentPath, childPaths, nil
+			}
 		}
 	}
 
-	if sysfsPath == "" {
-		return "", errors.New("not found")
-	}
-
-	return sysfsPath, nil
+	return "", "", []string{}, errors.New("sysfsPath, parentPath, and childPaths are not found")
 }
 
 func sysfsUevent(sysfsPath string) ([]string, error) {
