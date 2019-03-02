@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/blp1526/blkinfo.svg?branch=travis)](https://travis-ci.org/blp1526/blkinfo)
+[![Build Status](https://travis-ci.org/blp1526/blkinfo.svg?branch=master)](https://travis-ci.org/blp1526/blkinfo)
 
 # blkinfo
 
