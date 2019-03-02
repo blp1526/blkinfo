@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/blp1526/go-blkinfo"
+	"github.com/blp1526/blkinfo"
 	"github.com/urfave/cli"
 )
 
