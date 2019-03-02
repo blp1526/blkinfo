@@ -8,7 +8,7 @@ A Linux Block Device Info Library
 
 ### As A Package
 
-```
+```go
 package main
 
 import (

@@ -14,11 +14,11 @@ type BlkInfo struct {
 	Path         string   `json:"path"           yaml:"path"          `
 	RealPath     string   `json:"real_path"      yaml:"real_path"     `
 	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
-	SysPath      string   `json:"sys_path"       yaml:"sys_path"      `
-	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
 	ParentPath   string   `json:"parent_path"    yaml:"parent_path"   `
 	ChildPaths   []string `json:"child_paths"    yaml:"child_paths"   `
+	SysPath      string   `json:"sys_path"       yaml:"sys_path"      `
 	Sys          *Sys     `json:"sys"            yaml:"sys"           `
+	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
 	UdevData     []string `json:"udev_data"      yaml:"udev_data"     `
 }
 
@@ -190,7 +190,7 @@ func relatedPaths(path string) (sysPath string, parentPath string, childPaths []
 			case fileInfoName:
 				// for example /sys/block/sda
 				sysPath = filepath.Join(blockPath, fileInfoName)
-				fileInfoList, err := ioutil.ReadDir(sysPath)
+				fileInfoList, err = ioutil.ReadDir(sysPath)
 				if err != nil {
 					return "", "", []string{}, err
 				}
@@ -202,16 +202,19 @@ func relatedPaths(path string) (sysPath string, parentPath string, childPaths []
 						childPaths = append(childPaths, filepath.Join("/", "dev", fileInfoName))
 					}
 				}
-
-				parentPath = ""
-				return sysPath, parentPath, childPaths, nil
 			default:
 				// for example /sys/block/sda/sda1
 				sysPath = filepath.Join(blockPath, fileInfoName, devName)
 				parentPath = filepath.Join("/", "dev", fileInfoName)
 				childPaths = []string{}
-				return sysPath, parentPath, childPaths, nil
 			}
+
+			sysPath, err = filepath.EvalSymlinks(sysPath)
+			if err != nil {
+				return "", "", []string{}, err
+			}
+
+			return sysPath, parentPath, childPaths, nil
 		}
 	}
 
