@@ -29,5 +29,5 @@ func main() {
 
 ```
 $ make
-$ ./bin/blkinfo show /dev/sda
+$ ./bin/blkinfo show --format json /dev/sda
 ```
