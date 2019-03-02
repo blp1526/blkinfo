@@ -11,6 +11,7 @@ import (
 
 // BlkInfo shows a block device info.
 type BlkInfo struct {
+	Path         string   `json:"path"           yaml:"path"          `
 	RealPath     string   `json:"real_path"      yaml:"real_path"     `
 	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
 	SysPath      string   `json:"sys_path"       yaml:"sys_path"      `
@@ -29,23 +30,24 @@ type Sys struct {
 }
 
 // New initializes *BlkInfo.
-func New(devPath string) (*BlkInfo, error) {
+func New(path string) (*BlkInfo, error) {
 	var err error
 
-	if devPath == "" {
-		return nil, errors.New("a devPath is not given")
+	if path == "" {
+		return nil, errors.New("a path is not given")
 	}
 
 	bi := &BlkInfo{
 		Sys: &Sys{},
 	}
 
-	bi.RealPath, err = filepath.EvalSymlinks(devPath)
+	bi.Path = path
+	bi.RealPath, err = filepath.EvalSymlinks(bi.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	bi.SysPath, bi.ParentPath, bi.ChildPaths, err = paths(bi.RealPath)
+	bi.SysPath, bi.ParentPath, bi.ChildPaths, err = relatedPaths(bi.RealPath)
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +175,8 @@ func mountpoint(mtab string, realPath string) (string, error) {
 	return "", nil
 }
 
-func paths(realPath string) (sysPath string, parentPath string, childPaths []string, err error) {
-	devName := filepath.Base(realPath)
+func relatedPaths(path string) (sysPath string, parentPath string, childPaths []string, err error) {
+	devName := filepath.Base(path)
 	blockPath := filepath.Join("/", "sys", "block")
 	fileInfoList, err := ioutil.ReadDir(blockPath)
 	if err != nil {
