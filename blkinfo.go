@@ -50,7 +50,7 @@ func New(devPath string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	bi.Sys.Uevent, err = sysUevent(bi.SysPath)
+	bi.Sys.Uevent, err = lines(filepath.Join(bi.SysPath, "uevent"))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func New(devPath string) (*BlkInfo, error) {
 
 	bi.UdevDataPath = udevDataPath(majorMinor)
 
-	bi.UdevData, err = udevData(bi.UdevDataPath)
+	bi.UdevData, err = lines(bi.UdevDataPath)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +100,15 @@ func readFile(path string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(b)), nil
+}
+
+func lines(path string) ([]string, error) {
+	text, err := readFile(path)
+	if err != nil {
+		return []string{}, err
+	}
+
+	return strings.Split(text, "\n"), nil
 }
 
 func trimQuotationMarks(s string) string {
@@ -207,15 +216,6 @@ func paths(realPath string) (sysPath string, parentPath string, childPaths []str
 	return "", "", []string{}, errors.New("sysPath, parentPath, and childPaths are not found")
 }
 
-func sysUevent(sysPath string) ([]string, error) {
-	sysUevent, err := readFile(filepath.Join(sysPath, "uevent"))
-	if err != nil {
-		return []string{}, err
-	}
-
-	return strings.Split(sysUevent, "\n"), nil
-}
-
 func majorMinor(sysPath string) (string, error) {
 	majorMinor, err := readFile(filepath.Join(sysPath, "dev"))
 	if err != nil {
@@ -229,30 +229,17 @@ func udevDataPath(majorMinor string) string {
 	return filepath.Join("/", "run", "udev", "data", "b"+majorMinor)
 }
 
-func udevData(udevDataPath string) ([]string, error) {
-	rawUdevData, err := readFile(udevDataPath)
+// OSRelease shows /etc/os-release.
+func (bi *BlkInfo) OSRelease() ([]string, error) {
+	if bi.Mountpoint == "" {
+		return []string{}, errors.New("this device is not mounted")
+	}
+
+	osReleasePath := filepath.Join(bi.Mountpoint, "etc", "os-release")
+	osRelease, err := lines(osReleasePath)
 	if err != nil {
 		return []string{}, err
 	}
 
-	udevData := strings.Split(rawUdevData, "\n")
-	return udevData, nil
-}
-
-// OSRelease shows /etc/os-release.
-func (bi *BlkInfo) OSRelease() ([]string, error) {
-	osRelease := []string{}
-
-	if bi.Mountpoint == "" {
-		return osRelease, errors.New("this device is not mounted")
-	}
-
-	osReleasePath := filepath.Join(bi.Mountpoint, "etc", "os-release")
-	rawOSRelease, err := readFile(osReleasePath)
-	if err != nil {
-		return osRelease, err
-	}
-
-	osRelease = strings.Split(rawOSRelease, "\n")
 	return osRelease, nil
 }
