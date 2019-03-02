@@ -31,6 +31,11 @@ type Sys struct {
 // New initializes *BlkInfo.
 func New(devPath string) (*BlkInfo, error) {
 	var err error
+
+	if devPath == "" {
+		return nil, errors.New("a devPath is not given")
+	}
+
 	bi := &BlkInfo{
 		Sys: &Sys{},
 	}

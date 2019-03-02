@@ -1,4 +1,4 @@
-# go-blkinfo
+# blkinfo
 
 A Linux Block Device Info Library
 
@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/blp1526/go-blkinfo"
+	"github.com/blp1526/blkinfo"
 )
 
 func main() {
