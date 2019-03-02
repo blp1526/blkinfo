@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/blp1526/blkinfo.svg?branch=travis)](https://travis-ci.org/blp1526/blkinfo)
+
 # blkinfo
 
 A Linux Block Device Info Library

@@ -1,4 +1,6 @@
 language: go
-go: 1.11
+go: 1.12
 os:
   - linux
+env:
+  - GO111MODULE=on
