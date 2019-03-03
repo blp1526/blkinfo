@@ -1,12 +1,11 @@
 package blkinfo
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"errors"
 )
 
 // BlkInfo shows a block device info.
