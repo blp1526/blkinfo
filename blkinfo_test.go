@@ -108,3 +108,22 @@ func TestTrimQuottionMarks(t *testing.T) {
 		}
 	}
 }
+
+func TestUdevDataPath(t *testing.T) {
+	tests := []struct {
+		majorMinor string
+		want       string
+	}{
+		{
+			majorMinor: "8:1",
+			want:       "/run/udev/data/b8:1",
+		},
+	}
+
+	for _, tt := range tests {
+		got := udevDataPath(tt.majorMinor)
+		if got != tt.want {
+			t.Errorf("tt: %+v, got: %v", tt, got)
+		}
+	}
+}
