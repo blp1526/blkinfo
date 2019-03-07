@@ -1,6 +1,11 @@
 .PHONY: all
 all: build
 
+.PHONY: clean
+clean:
+	rm -rf bin/
+	@echo
+
 .PHONY: lint
 lint:
 	go get github.com/golangci/golangci-lint/cmd/golangci-lint
