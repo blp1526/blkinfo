@@ -8,24 +8,44 @@ import (
 	"strings"
 )
 
-// BlkInfo shows a block device info.
+// BlkInfo shows block device information.
 type BlkInfo struct {
-	Path         string   `json:"path"           yaml:"path"          `
-	RealPath     string   `json:"real_path"      yaml:"real_path"     `
-	Mountpoint   string   `json:"mountpoint"     yaml:"mountpoint"    `
-	ParentPath   string   `json:"parent_path"    yaml:"parent_path"   `
-	ChildPaths   []string `json:"child_paths"    yaml:"child_paths"   `
-	SysPath      string   `json:"sys_path"       yaml:"sys_path"      `
-	Sys          *Sys     `json:"sys"            yaml:"sys"           `
-	UdevDataPath string   `json:"udev_data_path" yaml:"udev_data_path"`
-	UdevData     []string `json:"udev_data"      yaml:"udev_data"     `
+	MajorMinor    string     `json:"major_minor"     yaml:"major_minor"    `
+	Path          string     `json:"path"            yaml:"path"           `
+	RealPath      string     `json:"real_path"       yaml:"real_path"      `
+	ParentPath    string     `json:"parent_path"     yaml:"parent_path"    `
+	ChildPaths    []string   `json:"child_paths"     yaml:"child_paths"    `
+	SysPath       string     `json:"sys_path"        yaml:"sys_path"       `
+	Sys           *Sys       `json:"sys"             yaml:"sys"            `
+	UdevDataPath  string     `json:"udev_data_path"  yaml:"udev_data_path" `
+	UdevData      []string   `json:"udev_data"       yaml:"udev_data"      `
+	MountInfoPath string     `json:"mount_info_path" yaml:"mount_info_path"`
+	MountInfo     *MountInfo `json:"mount_info"      yaml:"mount_info"     `
 }
 
-// Sys shows a sys info.
+// Sys shows sys information.
 type Sys struct {
+	// See https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
+	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
+	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
 	Uevent  []string `json:"uevent"  yaml:"uevent" `
 	Slaves  []string `json:"slaves"  yaml:"slaves" `
 	Holders []string `json:"holders" yaml:"holders"`
+}
+
+// MountInfo shows mount information.
+type MountInfo struct {
+	// See https://github.com/torvalds/linux/blob/d8372ba8ce288acdfce67cb873b2a741785c2e88/Documentation/filesystems/proc.txt#L1711
+	MountID        string   `json:"mount_id"        yaml:"mount_id"       `
+	ParentID       string   `json:"parent_id"       yaml:"parent_id"      `
+	MajorMinor     string   `json:"major_minor"     yaml:"major_minor"    `
+	Root           string   `json:"root"            yaml:"root"           `
+	MountPoint     string   `json:"mount_point"     yaml:"mount_point"    `
+	MountOptions   []string `json:"mount_options"   yaml:"mount_options"  `
+	OptionalFields []string `json:"optional_fields" yaml:"optional_fields"`
+	FilesystemType string   `json:"filesystem_type" yaml:"filesystem_type"`
+	MountSource    string   `json:"mount_source"    yaml:"mount_source"   `
+	SuperOptions   []string `json:"super_options"   yaml:"super_options"  `
 }
 
 // New initializes *BlkInfo.
@@ -56,9 +76,6 @@ func New(path string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	// https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
-	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
-	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
 	bi.Sys.Slaves, err = ls(filepath.Join(bi.SysPath, "slaves"))
 	if err != nil {
 		return nil, err
@@ -69,24 +86,19 @@ func New(path string) (*BlkInfo, error) {
 		return nil, err
 	}
 
-	majorMinor, err := majorMinor(bi.SysPath)
+	bi.MajorMinor, err = majorMinor(bi.SysPath)
 	if err != nil {
 		return nil, err
 	}
 
-	bi.UdevDataPath = udevDataPath(majorMinor)
-
+	bi.UdevDataPath = filepath.Join("/", "run", "udev", "data", "b"+bi.MajorMinor)
 	bi.UdevData, err = lines(bi.UdevDataPath)
 	if err != nil {
 		return nil, err
 	}
 
-	mtab, err := mtab()
-	if err != nil {
-		return nil, err
-	}
-
-	bi.Mountpoint, err = mountpoint(mtab, bi.RealPath)
+	bi.MountInfoPath = filepath.Join("/", "proc", "self", "mountinfo")
+	bi.MountInfo, err = newMountInfo(bi.MountInfoPath, bi.RealPath)
 	if err != nil {
 		return nil, err
 	}
@@ -143,35 +155,39 @@ func ls(path string) ([]string, error) {
 	return names, nil
 }
 
-func mtab() (string, error) {
-	mtab, err := readFile(filepath.Join("/", "etc", "mtab"))
+func newMountInfo(mountInfoPath string, realPath string) (*MountInfo, error) {
+	lines, err := readFile(mountInfoPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return mtab, nil
-}
+	mountInfo := &MountInfo{
+		MountOptions:   []string{},
+		OptionalFields: []string{},
+		SuperOptions:   []string{},
+	}
 
-func mountpoint(mtab string, realPath string) (string, error) {
-	for _, line := range strings.Split(mtab, "\n") {
-		fields := strings.Fields(line)
+	for _, line := range strings.Split(lines, "\n") {
+		separated := strings.SplitN(line, " - ", 2)
+		separatedFirst := strings.Fields(separated[0])
+		separatedLast := strings.Fields(separated[1])
 
-		pathField := fields[0]
-		mountpointField := fields[1]
-
-		if strings.HasPrefix(pathField, "/dev") {
-			realPathField, err := filepath.EvalSymlinks(pathField)
-			if err != nil {
-				return "", err
-			}
-
-			if realPathField == realPath {
-				return mountpointField, nil
-			}
+		if realPath == separatedLast[1] {
+			mountInfo.MountID = separatedFirst[0]
+			mountInfo.ParentID = separatedFirst[1]
+			mountInfo.MajorMinor = separatedFirst[2]
+			mountInfo.Root = separatedFirst[3]
+			mountInfo.MountPoint = separatedFirst[4]
+			mountInfo.MountOptions = strings.Split(separatedFirst[5], ",")
+			mountInfo.OptionalFields = separatedFirst[6:]
+			mountInfo.FilesystemType = separatedLast[0]
+			mountInfo.MountSource = separatedLast[1]
+			mountInfo.SuperOptions = strings.Split(separatedLast[2], ",")
+			return mountInfo, nil
 		}
 	}
 
-	return "", nil
+	return mountInfo, nil
 }
 
 func relatedPaths(path string) (sysPath string, parentPath string, childPaths []string, err error) {
@@ -227,23 +243,4 @@ func majorMinor(sysPath string) (string, error) {
 	}
 
 	return majorMinor, nil
-}
-
-func udevDataPath(majorMinor string) string {
-	return filepath.Join("/", "run", "udev", "data", "b"+majorMinor)
-}
-
-// OSRelease shows /etc/os-release.
-func (bi *BlkInfo) OSRelease() ([]string, error) {
-	if bi.Mountpoint == "" {
-		return []string{}, errors.New("this device is not mounted")
-	}
-
-	osReleasePath := filepath.Join(bi.Mountpoint, "etc", "os-release")
-	osRelease, err := lines(osReleasePath)
-	if err != nil {
-		return []string{}, err
-	}
-
-	return osRelease, nil
 }

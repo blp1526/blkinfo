@@ -5,6 +5,7 @@ linters:
     - prealloc
     - gosec
     - gochecknoglobals
+    - lll
 linters-settings:
   govet:
     check-shadowing: true
