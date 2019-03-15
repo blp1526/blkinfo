@@ -155,7 +155,12 @@ func ls(path string) ([]string, error) {
 	return names, nil
 }
 
-func newMountInfo(mountInfoPath string, realPath string) (*MountInfo, error) {
+func newMountInfo(mountInfoPath string, path string) (*MountInfo, error) {
+	realPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return nil, err
+	}
+
 	lines, err := readFile(mountInfoPath)
 	if err != nil {
 		return nil, err
@@ -172,7 +177,17 @@ func newMountInfo(mountInfoPath string, realPath string) (*MountInfo, error) {
 		separatedFirst := strings.Fields(separated[0])
 		separatedLast := strings.Fields(separated[1])
 
-		if realPath == separatedLast[1] {
+		mountSource := separatedLast[1]
+		if !strings.HasPrefix(mountSource, "/dev") {
+			continue
+		}
+
+		realMountSource, err := filepath.EvalSymlinks(mountSource)
+		if err != nil {
+			return nil, err
+		}
+
+		if realPath == realMountSource {
 			mountInfo.MountID = separatedFirst[0]
 			mountInfo.ParentID = separatedFirst[1]
 			mountInfo.MajorMinor = separatedFirst[2]
@@ -191,7 +206,12 @@ func newMountInfo(mountInfoPath string, realPath string) (*MountInfo, error) {
 }
 
 func relatedPaths(path string) (sysPath string, parentPath string, childPaths []string, err error) {
-	devName := filepath.Base(path)
+	realPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", "", []string{}, err
+	}
+
+	devName := filepath.Base(realPath)
 	blockPath := filepath.Join("/", "sys", "block")
 	fileInfoList, err := ioutil.ReadDir(blockPath)
 	if err != nil {
