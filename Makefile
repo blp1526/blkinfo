@@ -1,3 +1,6 @@
+export GO111MODULE=on
+export GOBIN=${PWD}/bin
+
 .PHONY: all
 all: build
 
@@ -10,7 +13,7 @@ clean:
 lint:
 	go get github.com/golangci/golangci-lint/cmd/golangci-lint
 	@echo
-	golangci-lint run ./...
+	./bin/golangci-lint run ./...
 	@echo
 
 .PHONY: test

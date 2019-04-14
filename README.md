@@ -17,19 +17,17 @@ $ ./bin/blkinfo show --format json /dev/vda
 
 ```json
 {
+  "major_minor": "252:0",
   "path": "/dev/vda",
   "real_path": "/dev/vda",
-  "mountpoint": "",
   "parent_path": "",
   "child_paths": [
-    "/dev/vda1",
-    "/dev/vda2",
-    "/dev/vda5"
+    "/dev/vda1"
   ],
-  "sys_path": "/sys/devices/pci0000:00/0000:00:07.0/virtio2/block/vda",
+  "sys_path": "/sys/devices/pci0000:00/0000:00:08.0/virtio2/block/vda",
   "sys": {
     "uevent": [
-      "MAJOR=253",
+      "MAJOR=252",
       "MINOR=0",
       "DEVNAME=vda",
       "DEVTYPE=disk"
@@ -37,18 +35,32 @@ $ ./bin/blkinfo show --format json /dev/vda
     "slaves": [],
     "holders": []
   },
-  "udev_data_path": "/run/udev/data/b253:0",
+  "udev_data_path": "/run/udev/data/b252:0",
   "udev_data": [
-    "S:disk/by-path/virtio-pci-0000:00:07.0",
-    "W:12",
-    "I:2277684",
-    "E:ID_PATH=virtio-pci-0000:00:07.0",
-    "E:ID_PATH_TAG=virtio-pci-0000_00_07_0",
+    "S:disk/by-path/virtio-pci-0000:00:08.0",
+    "S:disk/by-path/pci-0000:00:08.0",
+    "W:3",
+    "I:2430960",
+    "E:ID_PATH=pci-0000:00:08.0",
+    "E:ID_PATH_TAG=pci-0000_00_08_0",
     "E:ID_PART_TABLE_UUID=xxxxxxxx",
     "E:ID_PART_TABLE_TYPE=dos",
     "E:ID_FS_TYPE=",
     "G:systemd"
-  ]
+  ],
+  "mount_info_path": "/proc/self/mountinfo",
+  "mount_info": {
+    "mount_id": "",
+    "parent_id": "",
+    "major_minor": "",
+    "root": "",
+    "mount_point": "",
+    "mount_options": [],
+    "optional_fields": [],
+    "filesystem_type": "",
+    "mount_source": "",
+    "super_options": []
+  }
 }
 ```
 
