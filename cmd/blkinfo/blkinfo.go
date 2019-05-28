@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/blp1526/blkinfo"
 	"github.com/ghodss/yaml"
@@ -19,7 +20,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "blkinfo"
-	app.Usage = ""
+	app.Usage = "block device information utility for Linux"
 	app.Version = version
 	app.Authors = []cli.Author{
 		{
@@ -32,7 +33,7 @@ func main() {
 	allowedFormat := "[json|yaml]"
 	var showCommand = cli.Command{
 		Name:      "show",
-		Usage:     "Show a block device info.",
+		Usage:     "Shows block device information",
 		ArgsUsage: "[path]",
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -48,8 +49,7 @@ func main() {
 				return cli.NewExitError(err, exitCodeNG)
 			}
 
-			var b []byte
-			b, err = json.MarshalIndent(bi, "", "  ")
+			b, err := json.MarshalIndent(bi, "", "  ")
 			if err != nil {
 				return cli.NewExitError(err, exitCodeNG)
 			}
@@ -68,7 +68,8 @@ func main() {
 				return cli.NewExitError(err, exitCodeNG)
 			}
 
-			fmt.Printf("%s\n", string(b))
+			s := strings.TrimSpace(string(b))
+			fmt.Printf("%s\n", s)
 			return nil
 		},
 	}
