@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/blp1526/blkinfo"
+	"github.com/ghodss/yaml"
 	"github.com/urfave/cli"
-	yaml "gopkg.in/yaml.v2"
 )
 
 const exitCodeNG = 1
@@ -49,15 +49,17 @@ func main() {
 			}
 
 			var b []byte
+			b, err = json.MarshalIndent(bi, "", "  ")
+			if err != nil {
+				return cli.NewExitError(err, exitCodeNG)
+			}
+
 			format := c.String("format")
 			switch format {
 			case "json":
-				b, err = json.MarshalIndent(bi, "", "  ")
-				if err != nil {
-					return cli.NewExitError(err, exitCodeNG)
-				}
+				break
 			case "yaml":
-				b, err = yaml.Marshal(bi)
+				b, err = yaml.JSONToYAML(b)
 				if err != nil {
 					return cli.NewExitError(err, exitCodeNG)
 				}
@@ -67,7 +69,6 @@ func main() {
 			}
 
 			fmt.Printf("%s\n", string(b))
-
 			return nil
 		},
 	}

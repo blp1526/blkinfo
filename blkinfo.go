@@ -10,17 +10,17 @@ import (
 
 // BlkInfo shows block device information.
 type BlkInfo struct {
-	MajorMinor    string     `json:"major_minor"     yaml:"major_minor"    `
-	Path          string     `json:"path"            yaml:"path"           `
-	RealPath      string     `json:"real_path"       yaml:"real_path"      `
-	ParentPath    string     `json:"parent_path"     yaml:"parent_path"    `
-	ChildPaths    []string   `json:"child_paths"     yaml:"child_paths"    `
-	SysPath       string     `json:"sys_path"        yaml:"sys_path"       `
-	Sys           *Sys       `json:"sys"             yaml:"sys"            `
-	UdevDataPath  string     `json:"udev_data_path"  yaml:"udev_data_path" `
-	UdevData      []string   `json:"udev_data"       yaml:"udev_data"      `
-	MountInfoPath string     `json:"mount_info_path" yaml:"mount_info_path"`
-	MountInfo     *MountInfo `json:"mount_info"      yaml:"mount_info"     `
+	MajorMinor    string     `json:"major_minor"    `
+	Path          string     `json:"path"           `
+	RealPath      string     `json:"real_path"      `
+	ParentPath    string     `json:"parent_path"    `
+	ChildPaths    []string   `json:"child_paths"    `
+	SysPath       string     `json:"sys_path"       `
+	Sys           *Sys       `json:"sys"            `
+	UdevDataPath  string     `json:"udev_data_path" `
+	UdevData      []string   `json:"udev_data"      `
+	MountInfoPath string     `json:"mount_info_path"`
+	MountInfo     *MountInfo `json:"mount_info"     `
 }
 
 // Sys shows sys information.
@@ -28,24 +28,24 @@ type Sys struct {
 	// See https://github.com/torvalds/linux/blob/d13937116f1e82bf508a6325111b322c30c85eb9/fs/block_dev.c#L1229-L1242
 	// /sys/block/dm-0/slaves/sda  --> /sys/block/sda
 	// /sys/block/sda/holders/dm-0 --> /sys/block/dm-0
-	Uevent  []string `json:"uevent"  yaml:"uevent" `
-	Slaves  []string `json:"slaves"  yaml:"slaves" `
-	Holders []string `json:"holders" yaml:"holders"`
+	Uevent  []string `json:"uevent" `
+	Slaves  []string `json:"slaves" `
+	Holders []string `json:"holders"`
 }
 
 // MountInfo shows mount information.
 type MountInfo struct {
 	// See https://github.com/torvalds/linux/blob/d8372ba8ce288acdfce67cb873b2a741785c2e88/Documentation/filesystems/proc.txt#L1711
-	MountID        string   `json:"mount_id"        yaml:"mount_id"       `
-	ParentID       string   `json:"parent_id"       yaml:"parent_id"      `
-	MajorMinor     string   `json:"major_minor"     yaml:"major_minor"    `
-	Root           string   `json:"root"            yaml:"root"           `
-	MountPoint     string   `json:"mount_point"     yaml:"mount_point"    `
-	MountOptions   []string `json:"mount_options"   yaml:"mount_options"  `
-	OptionalFields []string `json:"optional_fields" yaml:"optional_fields"`
-	FilesystemType string   `json:"filesystem_type" yaml:"filesystem_type"`
-	MountSource    string   `json:"mount_source"    yaml:"mount_source"   `
-	SuperOptions   []string `json:"super_options"   yaml:"super_options"  `
+	MountID        string   `json:"mount_id"       `
+	ParentID       string   `json:"parent_id"      `
+	MajorMinor     string   `json:"major_minor"    `
+	Root           string   `json:"root"           `
+	MountPoint     string   `json:"mount_point"    `
+	MountOptions   []string `json:"mount_options"  `
+	OptionalFields []string `json:"optional_fields"`
+	FilesystemType string   `json:"filesystem_type"`
+	MountSource    string   `json:"mount_source"   `
+	SuperOptions   []string `json:"super_options"  `
 }
 
 // New initializes *BlkInfo.
