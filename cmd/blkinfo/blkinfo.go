@@ -13,15 +13,12 @@ import (
 
 const exitCodeNG = 1
 
-var version string
-
 func main() {
-	version = "0.0.1"
-
 	app := cli.NewApp()
 	app.Name = "blkinfo"
 	app.Usage = "block device information utility for Linux"
-	app.Version = version
+	app.Version = blkinfo.Version()
+	app.Description = fmt.Sprintf("REVISION: %s", blkinfo.Revision())
 	app.Authors = []cli.Author{
 		{
 			Name:  "Shingo Kawamura",
