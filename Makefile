@@ -12,10 +12,14 @@ clean:
 	rm -rf bin/
 	@echo
 
-.PHONY: lint
-lint:
+.PHONY: mod
+mod:
+	go mod tidy
 	go get github.com/golangci/golangci-lint/cmd/golangci-lint
 	@echo
+
+.PHONY: lint
+lint: mod
 	./bin/golangci-lint run ./...
 	@echo
 
