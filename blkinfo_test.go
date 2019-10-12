@@ -44,6 +44,7 @@ THE SOFTWARE.`,
 	for _, tt := range tests {
 		got, err := readFile(tt.path)
 		errMsg := fmt.Sprintf("tt: %+v, got: %v, err: %v", tt, got, err)
+
 		if tt.err && err == nil {
 			t.Errorf(errMsg)
 		}

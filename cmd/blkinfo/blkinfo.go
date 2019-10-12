@@ -13,7 +13,7 @@ import (
 
 const exitCodeNG = 1
 
-func main() {
+func main() { // nolint: funlen
 	app := cli.NewApp()
 	app.Name = "blkinfo"
 	app.Usage = "block device information utility for Linux"
@@ -28,6 +28,7 @@ func main() {
 	app.Copyright = "(c) 2019 Shingo Kawamura"
 
 	allowedFormat := "[json|yaml]"
+
 	var showCommand = cli.Command{
 		Name:      "show",
 		Usage:     "Shows block device information",
