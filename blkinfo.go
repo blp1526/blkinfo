@@ -1,3 +1,4 @@
+// Package blkinfo implements methods for block device information.
 package blkinfo
 
 import (
@@ -62,6 +63,7 @@ func New(path string) (*BlkInfo, error) {
 
 	bi.Path = path
 	bi.RealPath, err = filepath.EvalSymlinks(bi.Path)
+
 	if err != nil {
 		return nil, err
 	}
@@ -93,12 +95,14 @@ func New(path string) (*BlkInfo, error) {
 
 	bi.UdevDataPath = filepath.Join("/", "run", "udev", "data", "b"+bi.MajorMinor)
 	bi.UdevData, err = lines(bi.UdevDataPath)
+
 	if err != nil {
 		return nil, err
 	}
 
 	bi.MountInfoPath = filepath.Join("/", "proc", "self", "mountinfo")
 	bi.MountInfo, err = newMountInfo(bi.MountInfoPath, bi.RealPath)
+
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +133,7 @@ func trimQuotationMarks(s string) string {
 		if strings.HasPrefix(s, q) && strings.HasSuffix(s, q) {
 			s = strings.TrimPrefix(s, q)
 			s = strings.TrimSuffix(s, q)
+
 			break
 		}
 	}
@@ -198,6 +203,7 @@ func newMountInfo(mountInfoPath string, path string) (*MountInfo, error) {
 			mountInfo.FilesystemType = separatedLast[0]
 			mountInfo.MountSource = separatedLast[1]
 			mountInfo.SuperOptions = strings.Split(separatedLast[2], ",")
+
 			return mountInfo, nil
 		}
 	}
@@ -214,6 +220,7 @@ func relatedPaths(path string) (sysPath string, parentPath string, childPaths []
 	devName := filepath.Base(realPath)
 	blockPath := filepath.Join("/", "sys", "block")
 	fileInfoList, err := ioutil.ReadDir(blockPath)
+
 	if err != nil {
 		return "", "", []string{}, err
 	}
@@ -226,11 +233,13 @@ func relatedPaths(path string) (sysPath string, parentPath string, childPaths []
 				// for example /sys/block/sda
 				sysPath = filepath.Join(blockPath, fileInfoName)
 				fileInfoList, err = ioutil.ReadDir(sysPath)
+
 				if err != nil {
 					return "", "", []string{}, err
 				}
 
 				childPaths = []string{}
+
 				for _, fileInfo := range fileInfoList {
 					fileInfoName = fileInfo.Name()
 					if strings.HasPrefix(fileInfoName, devName) {
