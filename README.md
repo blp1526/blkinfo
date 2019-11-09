@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/blp1526/blkinfo.svg?branch=master)](https://travis-ci.org/blp1526/blkinfo)
 [![Go Report Card](https://goreportcard.com/badge/github.com/blp1526/blkinfo)](https://goreportcard.com/report/github.com/blp1526/blkinfo)
 [![GoDoc](https://godoc.org/github.com/blp1526/blkinfo?status.svg)](https://godoc.org/github.com/blp1526/blkinfo)
+[![GolangCI](https://golangci.com/badges/github.com/blp1526/blkinfo.svg)](https://golangci.com/r/github.com/blp1526/blkinfo)
 
 # blkinfo
 
