@@ -1,9 +1,6 @@
 linters:
   enable-all: true
   disable:
-    - maligned
-    - prealloc
-    - gosec
     - gochecknoglobals
     - lll
 linters-settings:
