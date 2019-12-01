@@ -16,6 +16,7 @@ clean:
 mod:
 	go mod tidy
 	go get github.com/golangci/golangci-lint/cmd/golangci-lint
+	go get github.com/goreleaser/goreleaser
 	@echo
 
 .PHONY: lint
@@ -30,5 +31,5 @@ test: lint
 
 .PHONY: build
 build: test
-	go build $(LDFLAGS) -o bin/blkinfo ./cmd/blkinfo
+	./bin/goreleaser release --rm-dist --snapshot
 	@echo

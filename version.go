@@ -1,7 +1,7 @@
 package blkinfo
 
 var (
-	version  = "0.0.1"
+	version  = "devel"
 	revision = "devel"
 )
 

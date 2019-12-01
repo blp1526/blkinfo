@@ -7,7 +7,7 @@ func TestVersion(t *testing.T) {
 		want string
 	}{
 		{
-			want: "0.0.1",
+			want: "devel",
 		},
 	}
 
