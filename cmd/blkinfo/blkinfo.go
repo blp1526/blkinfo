@@ -17,67 +17,72 @@ func main() { // nolint: funlen
 	app := cli.NewApp()
 	app.Name = "blkinfo"
 	app.Usage = "block device information utility for Linux"
+	app.UsageText = "blkinfo [options] path"
 	app.Version = blkinfo.Version()
-	app.Description = fmt.Sprintf("REVISION: %s", blkinfo.Revision())
+	app.Description = fmt.Sprintf("commit %s, built at %s", blkinfo.Revision(), blkinfo.BuiltAt())
+	app.Copyright = "(c) 2019 Shingo Kawamura"
 	app.Authors = []cli.Author{
 		{
 			Name:  "Shingo Kawamura",
 			Email: "blp1526@gmail.com",
 		},
 	}
-	app.Copyright = "(c) 2019 Shingo Kawamura"
-
+	app.HideHelp = true
 	allowedFormat := "[json|yaml]"
-
-	var showCommand = cli.Command{
-		Name:      "show",
-		Usage:     "Shows block device information",
-		ArgsUsage: "[path]",
-		Flags: []cli.Flag{
-			cli.StringFlag{
-				Name:  "format",
-				Value: "json",
-				Usage: fmt.Sprintf("output format %s", allowedFormat),
-			},
+	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "help, h",
+			Usage: "show help",
 		},
-		Action: func(c *cli.Context) (err error) {
-			path := c.Args().First()
-			bi, err := blkinfo.New(path)
-			if err != nil {
-				return cli.NewExitError(err, exitCodeNG)
-			}
-
-			b, err := json.MarshalIndent(bi, "", "  ")
-			if err != nil {
-				return cli.NewExitError(err, exitCodeNG)
-			}
-
-			format := c.String("format")
-			switch format {
-			case "json":
-				break
-			case "yaml":
-				b, err = yaml.JSONToYAML(b)
-				if err != nil {
-					return cli.NewExitError(err, exitCodeNG)
-				}
-			default:
-				err = fmt.Errorf("unknown format '%s', expected %s", format, allowedFormat)
-				return cli.NewExitError(err, exitCodeNG)
-			}
-
-			s := strings.TrimSpace(string(b))
-			fmt.Printf("%s\n", s)
-			return nil
+		cli.StringFlag{
+			Name:  "format, f",
+			Value: "json",
+			Usage: fmt.Sprintf("output format %s", allowedFormat),
 		},
 	}
 
-	app.Commands = []cli.Command{
-		showCommand,
+	app.Action = func(c *cli.Context) (err error) {
+		if c.Bool("help") {
+			cli.ShowAppHelpAndExit(c, 0)
+		}
+
+		if len(c.Args()) != 1 {
+			cli.ShowAppHelpAndExit(c, 0)
+		}
+
+		path := c.Args().First()
+		bi, err := blkinfo.New(path)
+
+		if err != nil {
+			return cli.NewExitError(err, exitCodeNG)
+		}
+
+		b, err := json.MarshalIndent(bi, "", "  ")
+		if err != nil {
+			return cli.NewExitError(err, exitCodeNG)
+		}
+
+		format := c.String("format")
+		switch format {
+		case "json":
+			break
+		case "yaml":
+			b, err = yaml.JSONToYAML(b)
+			if err != nil {
+				return cli.NewExitError(err, exitCodeNG)
+			}
+		default:
+			err = fmt.Errorf("unknown format '%s', expected %s", format, allowedFormat)
+			return cli.NewExitError(err, exitCodeNG)
+		}
+
+		s := strings.TrimSpace(string(b))
+		fmt.Printf("%s\n", s)
+
+		return nil
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		panic(err)
 	}
 }

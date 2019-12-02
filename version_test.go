@@ -7,7 +7,7 @@ func TestVersion(t *testing.T) {
 		want string
 	}{
 		{
-			want: "devel",
+			want: "dev",
 		},
 	}
 
@@ -24,12 +24,29 @@ func TestRevision(t *testing.T) {
 		want string
 	}{
 		{
-			want: "devel",
+			want: "none",
 		},
 	}
 
 	for _, tt := range tests {
 		got := Revision()
+		if got != tt.want {
+			t.Errorf("got: %v, tt.want: %v", got, tt.want)
+		}
+	}
+}
+
+func TestBuiltAt(t *testing.T) {
+	tests := []struct {
+		want string
+	}{
+		{
+			want: "unknown",
+		},
+	}
+
+	for _, tt := range tests {
+		got := BuiltAt()
 		if got != tt.want {
 			t.Errorf("got: %v, tt.want: %v", got, tt.want)
 		}

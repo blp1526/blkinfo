@@ -1,16 +1,22 @@
 package blkinfo
 
 var (
-	version  = "devel"
-	revision = "devel"
+	version  = "dev"
+	revision = "none"
+	builtAt  = "unknown"
 )
 
-// Version returns the version.
+// Version returns version.
 func Version() string {
 	return version
 }
 
-// Revision returns the revision.
+// Revision returns revision.
 func Revision() string {
 	return revision
+}
+
+// BuiltAt returns builtAt.
+func BuiltAt() string {
+	return builtAt
 }

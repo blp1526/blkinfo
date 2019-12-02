@@ -13,7 +13,7 @@ A Linux Block Device Info Library
 
 ```
 $ make
-$ ./bin/blkinfo show --format json /dev/vda
+$ ./dist/blkinfo_linux_amd64/blkinfo /dev/vda
 ```
 
 ```json
