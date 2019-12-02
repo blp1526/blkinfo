@@ -1,9 +1,6 @@
 export GO111MODULE=on
 export GOBIN=${PWD}/bin
 
-REVISION = $(shell git rev-parse --short HEAD)
-LDFLAGS = -ldflags="-s -w -X 'github.com/blp1526/blkinfo.revision=$(REVISION)'"
-
 .PHONY: all
 all: build
 
