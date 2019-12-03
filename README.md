@@ -7,13 +7,19 @@
 
 A Linux Block Device Info Library
 
+## Installation
+
+```
+$ wget https://github.com/blp1526/blkinfo/releases/latest/download/blkinfo_linux_x86_64.tar.gz
+$ tar zxvf blkinfo_linux_x86_64.tar.gz
+```
+
 ## Usage
 
 ### As A CLI
 
 ```
-$ make
-$ ./dist/blkinfo_linux_amd64/blkinfo /dev/vda
+$ blkinfo /dev/vda
 ```
 
 ```json
@@ -82,4 +88,10 @@ func main() {
 	b, _ := json.Marshal(bi)
 	fmt.Println(string(b))
 }
+```
+
+## Build
+
+```
+$ make
 ```
