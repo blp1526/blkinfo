@@ -11,13 +11,13 @@ import (
 
 // BlkInfo shows block device information.
 type BlkInfo struct {
-	MajorMinor    string     `json:"major_minor"    `
 	Path          string     `json:"path"           `
 	RealPath      string     `json:"real_path"      `
 	ParentPath    string     `json:"parent_path"    `
 	ChildPaths    []string   `json:"child_paths"    `
 	SysPath       string     `json:"sys_path"       `
 	Sys           *Sys       `json:"sys"            `
+	MajorMinor    string     `json:"major_minor"    `
 	UdevDataPath  string     `json:"udev_data_path" `
 	UdevData      []string   `json:"udev_data"      `
 	MountInfoPath string     `json:"mount_info_path"`
