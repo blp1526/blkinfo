@@ -28,16 +28,16 @@ func main() { // nolint: funlen
 		},
 	}
 	app.HideHelp = true
-	allowedFormat := "[json|yaml]"
+	allowedOutput := "[json|yaml]"
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
 			Usage: "show help",
 		},
 		cli.StringFlag{
-			Name:  "format, f",
+			Name:  "output, o",
 			Value: "json",
-			Usage: fmt.Sprintf("output format %s", allowedFormat),
+			Usage: fmt.Sprintf("output as %s", allowedOutput),
 		},
 	}
 
@@ -46,7 +46,8 @@ func main() { // nolint: funlen
 			cli.ShowAppHelpAndExit(c, 0)
 		}
 
-		if len(c.Args()) != 1 {
+		allowedArgsSize := 1
+		if len(c.Args()) != allowedArgsSize {
 			cli.ShowAppHelpAndExit(c, 0)
 		}
 
@@ -57,26 +58,26 @@ func main() { // nolint: funlen
 			return cli.NewExitError(err, exitCodeNG)
 		}
 
-		b, err := json.MarshalIndent(bi, "", "  ")
+		bytes, err := json.MarshalIndent(bi, "", "  ")
 		if err != nil {
 			return cli.NewExitError(err, exitCodeNG)
 		}
 
-		format := c.String("format")
-		switch format {
+		output := c.String("output")
+		switch output {
 		case "json":
 			break
 		case "yaml":
-			b, err = yaml.JSONToYAML(b)
-			if err != nil {
-				return cli.NewExitError(err, exitCodeNG)
-			}
+			bytes, err = yaml.JSONToYAML(bytes)
 		default:
-			err = fmt.Errorf("unknown format '%s', expected %s", format, allowedFormat)
+			err = fmt.Errorf("unknown output '%s', expected %s", output, allowedOutput)
+		}
+
+		if err != nil {
 			return cli.NewExitError(err, exitCodeNG)
 		}
 
-		s := strings.TrimSpace(string(b))
+		s := strings.TrimSpace(string(bytes))
 		fmt.Printf("%s\n", s)
 
 		return nil
