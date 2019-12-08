@@ -28,7 +28,7 @@ func main() { // nolint: funlen
 		},
 	}
 	app.HideHelp = true
-	allowedOutput := "[json|yaml]"
+	allowedOutput := `"json" or "yaml"`
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name:  "help, h",
@@ -70,7 +70,7 @@ func main() { // nolint: funlen
 		case "yaml":
 			bytes, err = yaml.JSONToYAML(bytes)
 		default:
-			err = fmt.Errorf("unknown output '%s', expected %s", output, allowedOutput)
+			err = fmt.Errorf(`unknown output "%s", expected %s`, output, allowedOutput)
 		}
 
 		if err != nil {

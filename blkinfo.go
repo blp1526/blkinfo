@@ -2,7 +2,7 @@
 package blkinfo
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,17 +11,20 @@ import (
 
 // BlkInfo shows block device information.
 type BlkInfo struct {
-	Path          string     `json:"path"           `
-	RealPath      string     `json:"real_path"      `
-	ParentPath    string     `json:"parent_path"    `
-	ChildPaths    []string   `json:"child_paths"    `
-	SysPath       string     `json:"sys_path"       `
-	Sys           *Sys       `json:"sys"            `
-	MajorMinor    string     `json:"major_minor"    `
-	UdevDataPath  string     `json:"udev_data_path" `
-	UdevData      []string   `json:"udev_data"      `
-	MountInfoPath string     `json:"mount_info_path"`
-	MountInfo     *MountInfo `json:"mount_info"     `
+	Path             string            `json:"path"             `
+	ResolvedPath     string            `json:"resolved_path"    `
+	ParentPath       string            `json:"parent_path"      `
+	ChildPaths       []string          `json:"child_paths"      `
+	SysPath          string            `json:"sys_path"         `
+	ResolevedSysPath string            `json:"resolved_sys_path"`
+	Sys              *Sys              `json:"sys"              `
+	MajorMinor       string            `json:"major_minor"      `
+	UdevDataPath     string            `json:"udev_data_path"   `
+	UdevData         []string          `json:"udev_data"        `
+	MountInfoPath    string            `json:"mount_info_path"  `
+	MountInfo        *MountInfo        `json:"mount_info"       `
+	OSReleasePath    string            `json:"os_release_path"  `
+	OSRelease        map[string]string `json:"os_release"       `
 }
 
 // Sys shows sys information.
@@ -50,11 +53,11 @@ type MountInfo struct {
 }
 
 // New initializes *BlkInfo.
-func New(path string) (*BlkInfo, error) {
+func New(path string) (*BlkInfo, error) { // nolint: funlen
 	var err error
 
 	if path == "" {
-		return nil, errors.New("a path is not given")
+		return nil, fmt.Errorf("a path is not given")
 	}
 
 	bi := &BlkInfo{
@@ -62,13 +65,13 @@ func New(path string) (*BlkInfo, error) {
 	}
 
 	bi.Path = path
-	bi.RealPath, err = filepath.EvalSymlinks(bi.Path)
+	bi.ResolvedPath, err = filepath.EvalSymlinks(bi.Path)
 
 	if err != nil {
 		return nil, err
 	}
 
-	bi.SysPath, bi.ParentPath, bi.ChildPaths, err = relatedPaths(bi.RealPath)
+	bi.SysPath, bi.ResolevedSysPath, bi.ParentPath, bi.ChildPaths, err = relatedPaths(bi.ResolvedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +104,15 @@ func New(path string) (*BlkInfo, error) {
 	}
 
 	bi.MountInfoPath = filepath.Join("/", "proc", "self", "mountinfo")
-	bi.MountInfo, err = newMountInfo(bi.MountInfoPath, bi.RealPath)
+	bi.MountInfo, err = newMountInfo(bi.MountInfoPath, bi.ResolvedPath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	bi.OSReleasePath = osReleasePath(bi.MountInfo.MountPoint)
+
+	bi.OSRelease, err = newOSRelease(bi.OSReleasePath)
 
 	if err != nil {
 		return nil, err
@@ -161,7 +172,7 @@ func ls(path string) ([]string, error) {
 }
 
 func newMountInfo(mountInfoPath string, path string) (*MountInfo, error) {
-	realPath, err := filepath.EvalSymlinks(path)
+	resolvedPath, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +203,7 @@ func newMountInfo(mountInfoPath string, path string) (*MountInfo, error) {
 			return nil, err
 		}
 
-		if realPath == realMountSource {
+		if resolvedPath == realMountSource {
 			mountInfo.MountID = separatedFirst[0]
 			mountInfo.ParentID = separatedFirst[1]
 			mountInfo.MajorMinor = separatedFirst[2]
@@ -211,18 +222,18 @@ func newMountInfo(mountInfoPath string, path string) (*MountInfo, error) {
 	return mountInfo, nil
 }
 
-func relatedPaths(path string) (sysPath string, parentPath string, childPaths []string, err error) {
-	realPath, err := filepath.EvalSymlinks(path)
+func relatedPaths(path string) (sysPath string, resolvedSysPath string, parentPath string, childPaths []string, err error) {
+	resolvedPath, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return "", "", []string{}, err
+		return "", "", "", []string{}, err
 	}
 
-	devName := filepath.Base(realPath)
+	devName := filepath.Base(resolvedPath)
 	blockPath := filepath.Join("/", "sys", "block")
 	fileInfoList, err := ioutil.ReadDir(blockPath)
 
 	if err != nil {
-		return "", "", []string{}, err
+		return "", "", "", []string{}, err
 	}
 
 	for _, fileInfo := range fileInfoList {
@@ -235,7 +246,7 @@ func relatedPaths(path string) (sysPath string, parentPath string, childPaths []
 				fileInfoList, err = ioutil.ReadDir(sysPath)
 
 				if err != nil {
-					return "", "", []string{}, err
+					return "", "", "", []string{}, err
 				}
 
 				childPaths = []string{}
@@ -253,16 +264,16 @@ func relatedPaths(path string) (sysPath string, parentPath string, childPaths []
 				childPaths = []string{}
 			}
 
-			sysPath, err = filepath.EvalSymlinks(sysPath)
+			resolvedSysPath, err := filepath.EvalSymlinks(sysPath)
 			if err != nil {
-				return "", "", []string{}, err
+				return "", "", "", []string{}, err
 			}
 
-			return sysPath, parentPath, childPaths, nil
+			return sysPath, resolvedSysPath, parentPath, childPaths, nil
 		}
 	}
 
-	return "", "", []string{}, errors.New("sysPath, parentPath, and childPaths are not found")
+	return "", "", "", []string{}, fmt.Errorf("sysPath, parentPath, and childPaths are not found")
 }
 
 func majorMinor(sysPath string) (string, error) {
@@ -272,4 +283,44 @@ func majorMinor(sysPath string) (string, error) {
 	}
 
 	return majorMinor, nil
+}
+
+func osReleasePath(mountPoint string) (path string) {
+	if mountPoint != "" {
+		path = filepath.Join(mountPoint, "etc", "os-release")
+	}
+
+	return path
+}
+
+func newOSRelease(osReleasePath string) (osRelease map[string]string, err error) {
+	osRelease = map[string]string{}
+
+	if osReleasePath != "" {
+		osReleaseLines, err := lines(osReleasePath)
+		if err != nil {
+			return map[string]string{}, err
+		}
+
+		for _, osReleaseLine := range osReleaseLines {
+			line := strings.TrimSpace(osReleaseLine)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			kv := strings.SplitN(osReleaseLine, "=", 2)
+			expectedKVSize := 2
+
+			if len(kv) != expectedKVSize {
+				return map[string]string{}, fmt.Errorf(`unexpected osReleaseLine, "%s"`, osReleaseLine)
+			}
+
+			key := kv[0]
+			value := kv[1]
+
+			osRelease[key] = trimQuotationMarks(value)
+		}
+	}
+
+	return osRelease, nil
 }
