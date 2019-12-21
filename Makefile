@@ -12,12 +12,18 @@ clean:
 .PHONY: mod
 mod:
 	go mod tidy
+	go get github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker
 	go get github.com/golangci/golangci-lint/cmd/golangci-lint
 	go get github.com/goreleaser/goreleaser
 	@echo
 
+.PHONY: editorconfig
+editorconfig: mod
+	./bin/editorconfig-checker
+	@echo
+
 .PHONY: lint
-lint: mod
+lint: editorconfig
 	./bin/golangci-lint run ./...
 	@echo
 
